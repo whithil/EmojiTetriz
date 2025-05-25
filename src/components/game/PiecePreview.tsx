@@ -50,8 +50,10 @@ export function PiecePreview({ piece, title }: PiecePreviewProps) {
             <div
               key={`${y}-${x}`}
               className={cn(
-                "w-full h-full flex items-center justify-center border border-foreground/10 text-xl",
-                cellEmoji ? "" : "bg-background/30"
+                "w-full h-full flex items-center justify-center text-xl", // Base styles for all cells
+                cellEmoji
+                  ? "border border-foreground/10" // Styles for cells with an emoji (part of the piece)
+                  : "bg-background/30 border border-transparent" // Styles for empty cells (transparent border)
               )}
             >
               {cellEmoji}
