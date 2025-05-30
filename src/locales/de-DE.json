@@ -104,5 +104,6 @@
   "toastLineClearDouble": "Doppelte Linie!",
   "toastLineClearTriple": "Dreifache Linie!",
   "toastLineClearTetris": "Tetriz!",
-  "toastLevelUp": "Level Up! Level {levelNumber} erreicht!"
+  "toastLevelUp": "Level Up! Level {levelNumber} erreicht!",
+  "pauseStateTitle": "Pausiert"
 }
