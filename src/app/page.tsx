@@ -11,16 +11,18 @@ import { GameControls } from "@/components/game/GameControls";
 import { GameOverOverlay } from "@/components/game/GameOverOverlay";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { SoundtrackSuggestionButton } from "@/components/game/SoundtrackSuggestionToast";
-import { Confetti } from "@/components/game/Confetti"; // New import
+import { Confetti } from "@/components/game/Confetti";
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Button } from "@/components/ui/button"; 
+import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
 
 export default function HomePage() {
-  const { 
+  const {
     board, currentPiece, nextPiece, ghostPiece, heldPiece, animatingRows,
-    score, level, linesCleared, gameState, startGame, showConfettiAnimation // Added showConfettiAnimation
+    score, level, linesCleared, gameState, startGame,
+    showLineClearConfetti, // Ensure this is used
+    showLevelUpConfetti    // Ensure this is used
   } = useGameContext();
   const { t } = useLocalization();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -49,7 +51,7 @@ export default function HomePage() {
           </div>
 
           <div className="md:col-span-2 relative order-1 md:order-2">
-            {gameState === "gameOver" && !currentPiece && ( 
+            {gameState === "gameOver" && !currentPiece && (
               <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg">
                  <h1 className="text-4xl font-bold text-primary mb-6">{t("appName")}</h1>
                 <Button onClick={startGame} size="lg" className="text-xl py-8 px-10 animate-pulse">
@@ -59,7 +61,8 @@ export default function HomePage() {
             )}
             <GameBoard board={board} currentPiece={currentPiece} ghostPiece={ghostPiece} animatingRows={animatingRows} />
             {gameState === "gameOver" && currentPiece && <GameOverOverlay />}
-            {showConfettiAnimation && <Confetti />} {/* Conditionally render Confetti */}
+            {showLevelUpConfetti && <Confetti key="levelup-confetti" animationType="levelUp" />}
+            {showLineClearConfetti && <Confetti key="lineclear-confetti" animationType="lineClear" />}
           </div>
         </div>
       </main>
@@ -70,5 +73,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
