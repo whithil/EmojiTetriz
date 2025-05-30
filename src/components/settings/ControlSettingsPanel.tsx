@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,20 +30,14 @@ export function ControlSettingsPanel() {
     });
   };
   
-  // Placeholder for actual key/button listening logic, which is more complex
   const handleChangeMapping = (type: "keyboard" | "gamepad", action: GameAction) => {
     setListeningFor({ type, action });
-    // In a full implementation, you'd add event listeners here for keydown or gamepad input
-    // For now, we'll just simulate it or leave it for a follow-up
     toast({
       title: t("listeningForInputTitle"),
       description: t("listeningForInputDescription", { action: t(`action${action.charAt(0).toUpperCase() + action.slice(1)}` as keyof ReturnType<typeof useLocalization>['t_type']) || action }),
     });
-    // For demonstration, we can auto-clear listening state
-    // setTimeout(() => setListeningFor(null), 3000);
   };
 
-  // This effect would handle the actual input listening
   useEffect(() => {
     if (!listeningFor) return;
 
@@ -58,8 +52,6 @@ export function ControlSettingsPanel() {
     };
 
     const handleGamepadInput = () => {
-        // This requires a more complex setup to monitor gamepad buttons globally
-        // For now, this part is conceptual for button press detection.
         if (listeningFor.type === 'gamepad') {
             const gamepads = navigator.getGamepads();
             for (const gamepad of gamepads) {
@@ -69,7 +61,7 @@ export function ControlSettingsPanel() {
                             updateGamepadMapping(listeningFor.action, i);
                             toast({ title: t("mappingUpdatedTitle"), description: `${t(`action${listeningFor.action.charAt(0).toUpperCase() + listeningFor.action.slice(1)}` as keyof ReturnType<typeof useLocalization>['t_type'])} ${t("mappedTo")} ${getGamepadButtonDisplayName(i)}` });
                             setListeningFor(null);
-                            return; // Stop listening once a button is pressed
+                            return; 
                         }
                     }
                 }
@@ -82,7 +74,6 @@ export function ControlSettingsPanel() {
     if (listeningFor.type === "keyboard") {
       document.addEventListener("keydown", handleKeyDown, { capture: true });
     } else if (listeningFor.type === "gamepad") {
-      // Poll for gamepad input - this is a simplified approach
       intervalId = setInterval(handleGamepadInput, 100);
     }
 
