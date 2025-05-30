@@ -25,7 +25,8 @@ export default function HomePage() {
     board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold,
     score, level, linesCleared, gameState, startGame, holdPiece: triggerHoldPiece,
     showLineClearConfetti,
-    showLevelUpConfetti
+    showLevelUpConfetti,
+    animatingRows // Added animatingRows here
   } = useGameContext();
   const { t } = useLocalization();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
