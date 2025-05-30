@@ -37,7 +37,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-2 py-4">
           <Tabs defaultValue="emoji-settings" className="w-full">
-            <TabsList className="grid w-full grid-cols-4"> {/* Adjusted for 4 tabs */}
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4"> {/* Adjusted for responsiveness */}
               <TabsTrigger value="emoji-settings">{t("emojiSettings")}</TabsTrigger>
               <TabsTrigger value="control-settings">{t("controlSettings")}</TabsTrigger>
               <TabsTrigger value="theme-sharing">{t("themeSharing")}</TabsTrigger>
