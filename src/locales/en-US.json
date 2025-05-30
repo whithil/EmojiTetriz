@@ -103,6 +103,6 @@
   "toastLineClearSingle": "Single Line Clear!",
   "toastLineClearDouble": "Double Line Clear!",
   "toastLineClearTriple": "Triple Line Clear!",
-  "toastLineClearTetris": "Tetris!",
+  "toastLineClearTetris": "Tetriz!",
   "toastLevelUp": "Level Up! Reached Level {levelNumber}!"
 }
