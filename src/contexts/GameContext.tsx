@@ -257,7 +257,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
       }
-      toast({ title: t("customMinoAdded"), description: t("customMinoAddedDesc", { name: newMino.name }) });
+      setTimeout(() => {
+        toast({ title: t("customMinoAdded"), description: t("customMinoAddedDesc", { name: newMino.name }) });
+      }, 0);
       return newData;
     });
   }, [t, toast]);
@@ -271,7 +273,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
       setPieceBag(currentBag => currentBag.filter(bagItemId => bagItemId !== id)); 
       if (minoToRemove) {
-        toast({ title: t("customMinoRemoved"), description: t("customMinoRemovedDesc", { name: minoToRemove.name }), variant: "destructive" });
+        setTimeout(() => {
+          toast({ title: t("customMinoRemoved"), description: t("customMinoRemovedDesc", { name: minoToRemove.name }), variant: "destructive" });
+        }, 0);
       }
       return newData;
     });
@@ -343,6 +347,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         ...firstPieceVal,
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((firstPieceVal.shape[0]?.length || 1) / 2),
         y: 0,
+        rotation: 0,
     };
     setCurrentPiece(positionedFirstPiece);
     setNextPiece(secondPieceVal);
@@ -375,7 +380,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       else if (numLinesCleared >= 4) { lineScore = 1200; toastMessageKey = "toastLineClearTetris"; }
 
       if (toastMessageKey && t) {
-        toast({ title: t(toastMessageKey) });
+        setTimeout(() => { // Defer toast call
+          toast({ title: t(toastMessageKey) });
+        }, 0);
       }
       setScore(prev => prev + lineScore * level);
 
@@ -388,7 +395,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => setShowLevelUpConfetti(false), LEVEL_UP_CONFETTI_DURATION);
         }
         if (t) {
-          toast({ title: t("toastLevelUp", { levelNumber: newLevel.toString() }) });
+          setTimeout(() => { // Defer toast call
+            toast({ title: t("toastLevelUp", { levelNumber: newLevel.toString() }) });
+          }, 0);
         }
       }
 
@@ -430,9 +439,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     } else {
       const customMinoDefinition = customMinoesDataInternal.find(m => m.id === currentPiece.id);
       if (customMinoDefinition) {
-        shapeForHold = customMinoDefinition.shape;
+        shapeForHold = customMinoDefinition.shape; // Use original drawn shape for hold
         emojiForHold = customMinoDefinition.emoji;
       } else {
+        // Fallback, should ideally not happen if customMinoesDataInternal is correctly populated
         shapeForHold = currentPiece.shape; 
         emojiForHold = currentPiece.emoji;
         console.warn(`Custom mino definition not found for ID ${currentPiece.id} during hold. Using current shape.`);
@@ -442,7 +452,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const pieceToStoreInHold: CurrentPiece = {
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((shapeForHold[0]?.length || 1) / 2),
         y: 0,
-        rotation: 0, 
+        rotation: 0, // Always store in default rotation
         shape: shapeForHold,
         emoji: emojiForHold,
         type: typeForHold,
