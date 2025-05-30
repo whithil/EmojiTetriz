@@ -3,23 +3,24 @@
 import type { ReactNode } from "react";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { Board, CurrentPiece, EmojiSet, GameState, TetrominoType, KeyboardMapping, GamepadMapping, GameAction, CustomMinoData } from "@/lib/tetris-constants";
-import { 
-  createEmptyBoard, 
-  getRandomPieceLogic, 
-  checkCollision, 
-  rotatePieceLogic, 
+import {
+  createEmptyBoard,
+  getRandomPieceLogic,
+  checkCollision,
+  rotatePieceLogic,
   mergePieceToBoard,
   getClearedRowIndices,
   performLineClear,
   getGhostPiece as getGhostPieceLogic
 } from "@/lib/tetris-logic";
-import { 
+import {
   BOARD_HEIGHT,
-  BOARD_WIDTH, 
-  INITIAL_LEVEL, 
-  INITIAL_SCORE, 
-  INITIAL_LINES_CLEARED, 
+  BOARD_WIDTH,
+  INITIAL_LEVEL,
+  INITIAL_SCORE,
+  INITIAL_LINES_CLEARED,
   DEFAULT_EMOJI_SET,
+  TETROMINOES, // Added TETROMINOES to imports
   TETROMINO_TYPES,
   DEFAULT_KEYBOARD_MAPPINGS,
   DEFAULT_GAMEPAD_MAPPINGS,
@@ -58,7 +59,7 @@ interface GameContextType {
   animatingRows: number[];
   keyboardMappings: KeyboardMapping;
   gamepadMappings: GamepadMapping;
-  
+
   confettiOnLineClearEnabled: boolean;
   setConfettiOnLineClearEnabled: (enabled: boolean) => void;
   showLineClearConfetti: boolean;
@@ -66,7 +67,7 @@ interface GameContextType {
   confettiOnLevelUpEnabled: boolean;
   setConfettiOnLevelUpEnabled: (enabled: boolean) => void;
   showLevelUpConfetti: boolean;
-  
+
   customMinoesEnabled: boolean;
   setCustomMinoesEnabled: (enabled: boolean) => void;
   customMinoesData: CustomMinoData[];
@@ -113,7 +114,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const [keyboardMappings, setKeyboardMappingsInternal] = useState<KeyboardMapping>(DEFAULT_KEYBOARD_MAPPINGS);
   const [gamepadMappings, setGamepadMappingsInternal] = useState<GamepadMapping>(DEFAULT_GAMEPAD_MAPPINGS);
-  
+
   const [confettiOnLineClearEnabledInternal, setConfettiOnLineClearEnabledInternalState] = useState<boolean>(false);
   const [showLineClearConfetti, setShowLineClearConfetti] = useState<boolean>(false);
   const [confettiOnLevelUpEnabledInternal, setConfettiOnLevelUpEnabledInternalState] = useState<boolean>(false);
@@ -143,7 +144,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     setKeyboardMappingsInternal(loadFromLocalStorage(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, DEFAULT_KEYBOARD_MAPPINGS));
     setGamepadMappingsInternal(loadFromLocalStorage(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, DEFAULT_GAMEPAD_MAPPINGS));
-    
+
     const parsedEmojiSet = loadFromLocalStorage<EmojiSet>(LOCAL_STORAGE_EMOJI_SET_KEY, DEFAULT_EMOJI_SET, (val) => {
         const parsed = JSON.parse(val) as EmojiSet;
         let valid = true;
@@ -163,7 +164,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const newMappings = { ...prev, [action]: newKey.toLowerCase() };
       GAME_ACTIONS.forEach(act => {
         if (act !== action && newMappings[act] === newKey.toLowerCase()) {
-          delete newMappings[act]; 
+          delete newMappings[act];
         }
       });
       localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(newMappings));
@@ -176,7 +177,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const newMappings = { ...prev, [action]: newButtonIndex };
       GAME_ACTIONS.forEach(act => {
         if (act !== action && newMappings[act] === newButtonIndex) {
-           delete newMappings[act]; 
+           delete newMappings[act];
         }
       });
       localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(newMappings));
@@ -243,26 +244,26 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const spawnNewPiece = useCallback((pieceToSpawnInsteadOfNext?: CurrentPiece) => {
     const pieceForCurrent = pieceToSpawnInsteadOfNext || nextPiece;
     const { piece: newNextPieceVal, newBag } = internalGetRandomPiece();
-    
+
     setPieceBag(newBag);
     setNextPiece(newNextPieceVal);
-    
+
     if (pieceForCurrent) {
       const positionedPiece: CurrentPiece = {
         ...pieceForCurrent,
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((pieceForCurrent.shape[0]?.length || 1) / 2),
-        y: 0, 
+        y: 0,
       };
 
       if (checkCollision(positionedPiece, board, {})) {
         setGameState("gameOver");
         setCurrentPiece(null);
-        setNextPiece(null); 
+        setNextPiece(null);
         setHeldPiece(null);
       } else {
         setCurrentPiece(positionedPiece);
       }
-    } else { 
+    } else {
       // This case typically only happens at the very start of the game
       // or if nextPiece was somehow null.
       const { piece: firstPiece, newBag: firstBag } = internalGetRandomPiece();
@@ -292,7 +293,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setAnimatingRows([]);
     setShowLineClearConfetti(false);
     setShowLevelUpConfetti(false);
-    
+
     setHeldPiece(null);
     setCanHold(true);
     setPieceBag([]); // Reset piece bag for a fresh start
@@ -300,7 +301,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     // Initialize with an empty bag so the first two pieces are pulled from a full set
     const { piece: firstPieceVal, newBag: bagAfterFirst } = getRandomPieceLogic(emojiSet, [], customMinoesDataInternal, customMinoesEnabledInternal);
     const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst, customMinoesDataInternal, customMinoesEnabledInternal);
-    
+
     const positionedFirstPiece: CurrentPiece = {
         ...firstPieceVal,
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((firstPieceVal.shape[0]?.length || 1) / 2),
@@ -317,14 +318,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const clearedIndices = getClearedRowIndices(boardWithPiece);
 
     if (clearedIndices.length > 0) {
-      setBoard(boardWithPiece); 
+      setBoard(boardWithPiece);
       setAnimatingRows(clearedIndices);
-      
+
       if (confettiOnLineClearEnabledInternal) {
         setShowLineClearConfetti(true);
         setTimeout(() => setShowLineClearConfetti(false), LINE_CLEAR_CONFETTI_EFFECT_DURATION);
       }
-      
+
       const numLinesCleared = clearedIndices.length;
       const newLinesClearedTotal = linesCleared + numLinesCleared;
       setLinesCleared(newLinesClearedTotal);
@@ -335,12 +336,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       else if (numLinesCleared === 2) { lineScore = 100; toastMessageKey = "toastLineClearDouble"; }
       else if (numLinesCleared === 3) { lineScore = 300; toastMessageKey = "toastLineClearTriple"; }
       else if (numLinesCleared >= 4) { lineScore = 1200; toastMessageKey = "toastLineClearTetris"; }
-      
+
       if (toastMessageKey && t) {
         toast({ title: t(toastMessageKey) });
       }
       setScore(prev => prev + lineScore * level);
-      
+
       const newLevel = Math.floor(newLinesClearedTotal / 10) + 1;
       if (newLevel > level) {
         setLevel(newLevel);
@@ -366,7 +367,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       spawnNewPiece();
       setCanHold(true);
     }
-  }, [board, linesCleared, level, score, spawnNewPiece, confettiOnLineClearEnabledInternal, confettiOnLevelUpEnabledInternal, t, toast]); 
+  }, [board, linesCleared, level, score, spawnNewPiece, confettiOnLineClearEnabledInternal, confettiOnLevelUpEnabledInternal, t, toast]);
 
   const processMoveDown = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0 || showLineClearConfetti || showLevelUpConfetti) return;
@@ -393,8 +394,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
 
 
-    const pieceToStoreInHold: CurrentPiece = { 
-        ...currentPiece, 
+    const pieceToStoreInHold: CurrentPiece = {
+        ...currentPiece,
         shape: shapeForHold, // Use canonical shape
         type: typeForHold,
         id: idForHold,
@@ -405,14 +406,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     if (!heldPiece) {
       setHeldPiece(pieceToStoreInHold);
-      spawnNewPiece(); 
+      spawnNewPiece();
     } else {
       const pieceFromHold = heldPiece; // This already has its canonical shape and 0 rotation
       setHeldPiece(pieceToStoreInHold);
       spawnNewPiece(pieceFromHold); // Spawn with the piece from hold
     }
     setCanHold(false);
-  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows]);
+  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows, board, emojiSet]); // Added board, emojiSet as dependencies
 
 
   useEffect(() => {
@@ -446,12 +447,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction);
     setCurrentPiece(rotated);
   };
-  
+
   const softDrop = () => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
-    setIsSoftDropping(true); 
+    setIsSoftDropping(true);
     processMoveDown();
-    setTimeout(() => setIsSoftDropping(false), 50); 
+    setTimeout(() => setIsSoftDropping(false), 50);
   };
 
   const hardDrop = () => {
@@ -479,12 +480,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   return (
     <GameContext.Provider value={{
       board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold, score, level, linesCleared, gameState, emojiSet, isSoftDropping, animatingRows,
-      keyboardMappings, gamepadMappings, 
+      keyboardMappings, gamepadMappings,
       confettiOnLineClearEnabled: confettiOnLineClearEnabledInternal, setConfettiOnLineClearEnabled, showLineClearConfetti,
       confettiOnLevelUpEnabled: confettiOnLevelUpEnabledInternal, setConfettiOnLevelUpEnabled, showLevelUpConfetti,
       customMinoesEnabled: customMinoesEnabledInternal, setCustomMinoesEnabled,
       customMinoesData: customMinoesDataInternal, addCustomMino, removeCustomMino,
-      startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece: rotatePieceInternal, softDrop, hardDrop, holdPiece, 
+      startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece: rotatePieceInternal, softDrop, hardDrop, holdPiece,
       setEmojiSet,
       getCurrentGameStateForAI,
       updateKeyboardMapping, updateGamepadMapping, resetControlMappings
@@ -504,7 +505,7 @@ export const useGameContext = () => {
 
 export type Translations = typeof import("@/locales/en-US.json");
 declare module "./LocalizationContext" {
-  interface LocalizationContextType { 
+  interface LocalizationContextType {
     t_type: Translations;
     t: (key: keyof Translations, params?: Record<string, string | number>) => string;
   }
