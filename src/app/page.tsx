@@ -10,7 +10,6 @@ import { GameInfoPanel } from "@/components/game/GameInfoPanel";
 import { GameControls } from "@/components/game/GameControls";
 import { GameOverOverlay } from "@/components/game/GameOverOverlay";
 import { SettingsModal } from "@/components/settings/SettingsModal";
-import { SoundtrackSuggestionButton } from "@/components/game/SoundtrackSuggestionToast";
 import { Confetti } from "@/components/game/Confetti";
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -21,8 +20,8 @@ export default function HomePage() {
   const {
     board, currentPiece, nextPiece, ghostPiece, heldPiece, animatingRows,
     score, level, linesCleared, gameState, startGame,
-    showLineClearConfetti, // Ensure this is used
-    showLevelUpConfetti    // Ensure this is used
+    showLineClearConfetti,
+    showLevelUpConfetti
   } = useGameContext();
   const { t } = useLocalization();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -47,7 +46,6 @@ export default function HomePage() {
             <PiecePreview piece={nextPiece} title={t("nextPiece")} />
             <GameInfoPanel score={score} level={level} linesCleared={linesCleared} />
             <GameControls />
-            <SoundtrackSuggestionButton />
           </div>
 
           <div className="md:col-span-2 relative order-1 md:order-2">

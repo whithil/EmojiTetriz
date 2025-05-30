@@ -15,7 +15,6 @@ This project was bootstrapped in Firebase Studio.
     *   Confetti animations for line clears and level-ups.
     *   **Draw Your Own Minoes**: Create, save, and play with your custom-designed Tetris pieces!
 *   **Multilingual Support**: Play in English, Portuguese, Spanish, French, or German.
-*   **AI Soundtrack Suggestions**: Get music ideas powered by Genkit based on your game state.
 
 ## Tech Stack
 
@@ -68,7 +67,7 @@ Follow these instructions to get a local copy up and running.
     The application should now be running on [http://localhost:9002](http://localhost:9002) (or your configured port).
 
 5.  **(Optional) Run Genkit Developer UI:**
-    To inspect and test your Genkit flows, you can run the Genkit developer UI in a separate terminal:
+    To inspect and test your Genkit flows (if any remain or are added later), you can run the Genkit developer UI in a separate terminal:
     ```bash
     npm run genkit:dev
     ```
@@ -90,7 +89,7 @@ npm run start
 ```
 This will serve the optimized version of your app.
 
-**Note on Deployment:** GitHub Pages is best for static sites. For a full-featured Next.js application with server-side logic (like EmojiTetriz with its Genkit AI features), you'll need a hosting platform that supports Node.js, such as Vercel, Netlify, Firebase Hosting (with Cloud Functions/Run), AWS Amplify, etc.
+**Note on Deployment:** GitHub Pages is best for static sites. If you aim for a fully static export (which will remove any remaining server-side Next.js features), you can investigate `next export`. For a full-featured Next.js application with server-side logic (like if you re-add AI features), you'll need a hosting platform that supports Node.js, such as Vercel, Netlify, Firebase Hosting (with Cloud Functions/Run), AWS Amplify, etc.
 
 ## About Our Default Custom Minoes
 
@@ -104,4 +103,3 @@ Meet our default custom minoes, Jorge and Luka!
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-```
