@@ -25,9 +25,11 @@ import {
   DEFAULT_KEYBOARD_MAPPINGS,
   DEFAULT_GAMEPAD_MAPPINGS,
   GAME_ACTIONS,
+  CUSTOM_MINO_GRID_SIZE,
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { decodeEmojiSet } from "@/lib/theme-utils"; // Added for URL theme parsing
 
 const LINE_CLEAR_ANIMATION_DURATION = 300; // ms
 const LEVEL_UP_CONFETTI_DURATION = 1500; // ms, should match Confetti.tsx
@@ -125,6 +127,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useLocalization();
   const { toast } = useToast();
 
+  const _setEmojiSet = useCallback((newEmojiSet: EmojiSet) => {
+    setEmojiSetState(newEmojiSet);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_EMOJI_SET_KEY, JSON.stringify(newEmojiSet));
+    }
+  }, []);
+
   useEffect(() => {
     const loadFromLocalStorage = <T,>(key: string, defaultValue: T, parser?: (val: string) => T): T => {
       if (typeof window === 'undefined') return defaultValue;
@@ -139,17 +148,40 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
       return defaultValue;
     };
+    
+    let themeAppliedFromUrl = false;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const themeFromUrl = urlParams.get('theme');
+
+      if (themeFromUrl) {
+        const decodedTheme = decodeEmojiSet(themeFromUrl);
+        if (decodedTheme) {
+          _setEmojiSet(decodedTheme); // This also saves to localStorage
+          themeAppliedFromUrl = true;
+          
+          // Clean the theme parameter from the URL
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.delete('theme');
+          window.history.replaceState({}, document.title, currentUrl.toString());
+        } else {
+          console.warn("Invalid theme string from URL parameter. Falling back to localStorage or default.");
+        }
+      }
+    }
+
+    if (!themeAppliedFromUrl) {
+      const parsedEmojiSet = loadFromLocalStorage<EmojiSet>(LOCAL_STORAGE_EMOJI_SET_KEY, DEFAULT_EMOJI_SET, (val) => {
+          const parsed = JSON.parse(val) as EmojiSet;
+          let valid = true;
+          for(const type of TETROMINO_TYPES) { if(!parsed[type]) { valid = false; break; }}
+          return valid ? parsed : DEFAULT_EMOJI_SET;
+      });
+      setEmojiSetState(parsedEmojiSet); // Use internal setter if _setEmojiSet would cause re-save unnecessarily
+    }
 
     setKeyboardMappingsInternal(loadFromLocalStorage(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, DEFAULT_KEYBOARD_MAPPINGS));
     setGamepadMappingsInternal(loadFromLocalStorage(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, DEFAULT_GAMEPAD_MAPPINGS));
-
-    const parsedEmojiSet = loadFromLocalStorage<EmojiSet>(LOCAL_STORAGE_EMOJI_SET_KEY, DEFAULT_EMOJI_SET, (val) => {
-        const parsed = JSON.parse(val) as EmojiSet;
-        let valid = true;
-        for(const type of TETROMINO_TYPES) { if(!parsed[type]) { valid = false; break; }}
-        return valid ? parsed : DEFAULT_EMOJI_SET;
-    });
-    setEmojiSetState(parsedEmojiSet);
 
     setConfettiOnLineClearEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, true));
     setConfettiOnLevelUpEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, true));
@@ -190,7 +222,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
     setCustomMinoesDataInternal(loadedCustomMinoes);
 
-  }, []);
+  }, [_setEmojiSet]); // _setEmojiSet is stable due to its own useCallback([])
 
   const updateKeyboardMapping = useCallback((action: GameAction, newKey: string) => {
     setKeyboardMappingsInternal(prev => {
@@ -228,14 +260,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(DEFAULT_KEYBOARD_MAPPINGS));
       localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(DEFAULT_GAMEPAD_MAPPINGS));
-    }
-  }, []);
-
-
-  const _setEmojiSet = useCallback((newEmojiSet: EmojiSet) => {
-    setEmojiSetState(newEmojiSet);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(LOCAL_STORAGE_EMOJI_SET_KEY, JSON.stringify(newEmojiSet));
     }
   }, []);
 
@@ -324,6 +348,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         ...firstPiece,
          x: Math.floor(BOARD_WIDTH / 2) - Math.floor((firstPiece.shape[0]?.length || 1) / 2),
         y: 0,
+        rotation: 0, 
       };
       if (checkCollision(positionedFirstPiece, board, {})) {
          setGameState("gameOver");
@@ -390,7 +415,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       else if (numLinesCleared >= 4) { lineScore = 1200; toastMessageKey = "toastLineClearTetris"; }
 
       if (toastMessageKey && t) {
-        setTimeout(() => { 
+         setTimeout(() => {
           toast({ title: t(toastMessageKey as keyof ReturnType<typeof useLocalization>['t_type']) });
         }, 0);
       }
@@ -405,7 +430,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => setShowLevelUpConfetti(false), LEVEL_UP_CONFETTI_DURATION);
         }
         if (t) {
-          setTimeout(() => { 
+          setTimeout(() => {
             toast({ title: t("toastLevelUp" as keyof ReturnType<typeof useLocalization>['t_type'], { levelNumber: newLevel.toString() }) });
           }, 0);
         }
