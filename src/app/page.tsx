@@ -8,7 +8,7 @@ import { PiecePreview } from "@/components/game/PiecePreview";
 import { HeldPiecePreview } from "@/components/game/HeldPiecePreview";
 import { GameInfoPanel } from "@/components/game/GameInfoPanel";
 import { GameControls } from "@/components/game/GameControls";
-import { MobileGameControls } from "@/components/game/MobileGameControls"; // New Import
+import { MobileGameControls } from "@/components/game/MobileGameControls";
 import { GameOverOverlay } from "@/components/game/GameOverOverlay";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { Confetti } from "@/components/game/Confetti";
@@ -16,14 +16,14 @@ import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-is-mobile"; // Corrected import path
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 
 
 export default function HomePage() {
   const {
-    board, currentPiece, nextPiece, ghostPiece, heldPiece, animatingRows,
-    score, level, linesCleared, gameState, startGame,
+    board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold,
+    score, level, linesCleared, gameState, startGame, holdPiece: triggerHoldPiece,
     showLineClearConfetti,
     showLevelUpConfetti
   } = useGameContext();
@@ -49,7 +49,14 @@ export default function HomePage() {
           {/* Desktop: Left Panel */}
           {!isMobile && (
             <div className="md:col-span-1 space-y-4 order-2 md:order-1">
-              <HeldPiecePreview piece={heldPiece} title={t("holdPieceTitle")} />
+              <HeldPiecePreview
+                piece={heldPiece}
+                title={t("holdPieceTitle")}
+                onHoldActionTrigger={triggerHoldPiece}
+                isMobile={isMobile}
+                canHold={canHold}
+                gameState={gameState}
+              />
               <PiecePreview piece={nextPiece} title={t("nextPiece")} />
               <GameInfoPanel score={score} level={level} linesCleared={linesCleared} />
               <GameControls />
@@ -78,11 +85,17 @@ export default function HomePage() {
           {isMobile && (
             <div className="mt-4 space-y-3 order-2 w-full">
               <div className="grid grid-cols-2 gap-3">
-                <HeldPiecePreview piece={heldPiece} title={t("holdPieceTitle")} />
+                <HeldPiecePreview
+                  piece={heldPiece}
+                  title={t("holdPieceTitle")}
+                  onHoldActionTrigger={triggerHoldPiece}
+                  isMobile={isMobile}
+                  canHold={canHold}
+                  gameState={gameState}
+                />
                 <PiecePreview piece={nextPiece} title={t("nextPiece")} />
               </div>
               <GameInfoPanel score={score} level={level} linesCleared={linesCleared} />
-              {/* On mobile, GameControls (desktop version) is not rendered if MobileGameControls handles input */}
             </div>
           )}
         </div>
@@ -94,5 +107,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
