@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { PauseIcon, PlayIcon, DownloadCloudIcon } from 'lucide-react'; // DownloadCloudIcon for Hold
 import { useLocalization } from '@/contexts/LocalizationContext';
 
-const DRAG_THRESHOLD_X = 50; // Min horizontal pixels to count as a drag for L/R move
-const DRAG_THRESHOLD_Y_SOFT = 50; // Min vertical pixels (down) for soft drop
-const DRAG_THRESHOLD_Y_HARD = -50; // Min vertical pixels (up) for hard drop (negative deltaY)
+// const DRAG_THRESHOLD_X = 50; // Min horizontal pixels to count as a drag for L/R move (used in touchend)
+// const DRAG_THRESHOLD_Y_SOFT = 50; // Min vertical pixels (down) for soft drop (used in touchend)
+// const DRAG_THRESHOLD_Y_HARD = -50; // Min vertical pixels (up) for hard drop (negative deltaY) (used in touchend)
 const TAP_DURATION_THRESHOLD = 300; // Max ms to count as a tap
 const TAP_MOVE_THRESHOLD = 20; // Max pixels moved to count as a tap
+const HORIZONTAL_PIXELS_PER_MOVE = 40; // Pixels of horizontal drag for one piece move
 
 export function MobileGameControls() {
   const { 
@@ -22,26 +23,61 @@ export function MobileGameControls() {
 
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const gameBoardTouchAreaRef = useRef<HTMLDivElement>(null); 
+  const accumulatedHorizontalDragRef = useRef<number>(0);
+  const lastProcessedTouchXRef = useRef<number | null>(null);
+  const gestureIntentRef = useRef<'horizontal' | 'vertical' | 'tap' | null>(null);
+
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (gameState !== 'playing' || e.touches.length === 0) return;
     const touch = e.touches[0];
     touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    accumulatedHorizontalDragRef.current = 0;
+    lastProcessedTouchXRef.current = touch.clientX;
+    gestureIntentRef.current = null; 
   }, [gameState]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (gameState !== 'playing' || !touchStartRef.current || e.touches.length === 0) return;
+    if (gameState !== 'playing' || !touchStartRef.current || e.touches.length === 0 || !lastProcessedTouchXRef.current) return;
     
     const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartRef.current.x;
-    const deltaY = touch.clientY - touchStartRef.current.y;
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
 
-    // If vertical movement is more significant than horizontal, prevent default scroll
-    // This check combined with touch-action:none on the div should handle it.
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      e.preventDefault();
+    const overallDeltaX = currentX - touchStartRef.current.x;
+    const overallDeltaY = currentY - touchStartRef.current.y;
+
+    // Gesture disambiguation: Determine intent early if not already set
+    if (!gestureIntentRef.current) {
+      if (Math.abs(overallDeltaX) > TAP_MOVE_THRESHOLD || Math.abs(overallDeltaY) > TAP_MOVE_THRESHOLD) {
+        if (Math.abs(overallDeltaX) > Math.abs(overallDeltaY) * 1.2) { // More horizontal
+          gestureIntentRef.current = 'horizontal';
+        } else if (Math.abs(overallDeltaY) > Math.abs(overallDeltaX) * 1.2) { // More vertical
+          gestureIntentRef.current = 'vertical';
+        }
+      }
     }
-  }, [gameState, touchStartRef]);
+    
+    // If vertical movement is more significant, let touchend handle vertical swipes.
+    // The `touch-action: none` on the div should prevent default scroll.
+    // No e.preventDefault() needed here due to touch-action CSS.
+
+    if (gestureIntentRef.current === 'horizontal') {
+        const moveDeltaX = currentX - lastProcessedTouchXRef.current;
+        accumulatedHorizontalDragRef.current += moveDeltaX;
+
+        while (accumulatedHorizontalDragRef.current >= HORIZONTAL_PIXELS_PER_MOVE) {
+            moveRight();
+            accumulatedHorizontalDragRef.current -= HORIZONTAL_PIXELS_PER_MOVE;
+        }
+        while (accumulatedHorizontalDragRef.current <= -HORIZONTAL_PIXELS_PER_MOVE) {
+            moveLeft();
+            accumulatedHorizontalDragRef.current += HORIZONTAL_PIXELS_PER_MOVE;
+        }
+    }
+    lastProcessedTouchXRef.current = currentX;
+
+  }, [gameState, moveLeft, moveRight]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (gameState !== 'playing' || !touchStartRef.current || e.changedTouches.length === 0) return;
@@ -59,36 +95,34 @@ export function MobileGameControls() {
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
 
-    // Check for Tap first
-    if (duration < TAP_DURATION_THRESHOLD && absDeltaX < TAP_MOVE_THRESHOLD && absDeltaY < TAP_MOVE_THRESHOLD) {
-      // It's a tap
-      const boardRect = gameBoardTouchAreaRef.current?.getBoundingClientRect();
-      if (boardRect) {
-        const tapXRelativeToBoard = endX - boardRect.left;
-        if (tapXRelativeToBoard < boardRect.width / 2) {
-          rotatePiece('ccw'); // Tap left side
-        } else {
-          rotatePiece('cw'); // Tap right side
-        }
-      }
-    } else {
-      // It's a drag/swipe
-      if (absDeltaY > absDeltaX) { // Prioritize vertical swipe
-        if (deltaY < DRAG_THRESHOLD_Y_HARD) { // Swipe Up
+    // If an intent was determined during move, prioritize it
+    if (gestureIntentRef.current === 'vertical') {
+        if (deltaY < -TAP_MOVE_THRESHOLD * 2) { // Swipe Up (more threshold for hard drop)
           hardDrop();
-        } else if (deltaY > DRAG_THRESHOLD_Y_SOFT) { // Swipe Down
+        } else if (deltaY > TAP_MOVE_THRESHOLD * 2) { // Swipe Down
           softDrop();
         }
-      } else if (absDeltaX > DRAG_THRESHOLD_X) { // Horizontal swipe
-        if (deltaX < -DRAG_THRESHOLD_X) { // Swipe Left
-          moveLeft();
-        } else if (deltaX > DRAG_THRESHOLD_X) { // Swipe Right
-          moveRight();
+    } else if (gestureIntentRef.current !== 'horizontal') { 
+      // If not a clear horizontal or vertical swipe, check for Tap
+      if (duration < TAP_DURATION_THRESHOLD && absDeltaX < TAP_MOVE_THRESHOLD && absDeltaY < TAP_MOVE_THRESHOLD) {
+        const boardRect = gameBoardTouchAreaRef.current?.getBoundingClientRect();
+        if (boardRect) {
+          const tapXRelativeToBoard = endX - boardRect.left;
+          if (tapXRelativeToBoard < boardRect.width / 2) {
+            rotatePiece('ccw'); 
+          } else {
+            rotatePiece('cw'); 
+          }
         }
       }
     }
+    // Reset refs for next touch
     touchStartRef.current = null;
-  }, [gameState, moveLeft, moveRight, softDrop, hardDrop, rotatePiece]);
+    lastProcessedTouchXRef.current = null;
+    accumulatedHorizontalDragRef.current = 0;
+    gestureIntentRef.current = null;
+
+  }, [gameState, hardDrop, softDrop, rotatePiece]);
   
   const handleMainAction = () => {
     if (gameState === "playing") pauseGame();
