@@ -37,6 +37,7 @@ export function MobileGameControls() {
     const deltaY = touch.clientY - touchStartRef.current.y;
 
     // If vertical movement is more significant than horizontal, prevent default scroll
+    // This check combined with touch-action:none on the div should handle it.
     if (Math.abs(deltaY) > Math.abs(deltaX)) {
       e.preventDefault();
     }
@@ -105,7 +106,8 @@ export function MobileGameControls() {
       {/* Touch Overlay for gestures - Covers the game board area */}
       <div 
         ref={gameBoardTouchAreaRef}
-        className="absolute inset-0 z-20" 
+        className="absolute inset-0 z-20"
+        style={{ touchAction: 'none' }} // Prevent default scroll/pan actions
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove} 
         onTouchEnd={handleTouchEnd}
@@ -139,4 +141,3 @@ export function MobileGameControls() {
     </>
   );
 }
-
