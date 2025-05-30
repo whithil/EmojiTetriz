@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { Board, CurrentPiece, EmojiSet, GameState, TetrominoType, KeyboardMapping, GamepadMapping, GameAction, CustomMinoData } from "@/lib/tetris-constants";
 import { 
   createEmptyBoard, 
-  getRandomPiece as getRandomPieceLogic, 
+  getRandomPieceLogic, 
   checkCollision, 
   rotatePieceLogic, 
   mergePieceToBoard,
@@ -101,7 +101,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [ghostPiece, setGhostPiece] = useState<CurrentPiece | null>(null);
   const [heldPiece, setHeldPiece] = useState<CurrentPiece | null>(null);
   const [canHold, setCanHold] = useState<boolean>(true);
-  const [pieceBag, setPieceBag] = useState<TetrominoType[]>([]); // Does not include custom minoes yet
+  const [pieceBag, setPieceBag] = useState<Array<TetrominoType | string>>([]);
   const [score, setScore] = useState(INITIAL_SCORE);
   const [level, setLevel] = useState(INITIAL_LEVEL);
   const [linesCleared, setLinesCleared] = useState(INITIAL_LINES_CLEARED);
@@ -227,6 +227,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const minoToRemove = prev.find(m => m.id === id);
       const newData = prev.filter(mino => mino.id !== id);
       localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
+      // Also remove from pieceBag if it's there
+      setPieceBag(currentBag => currentBag.filter(bagItemId => bagItemId !== id));
       if (minoToRemove) {
         toast({ title: t("customMinoRemoved"), description: t("customMinoRemovedDesc", { name: minoToRemove.name }), variant: "destructive" });
       }
@@ -235,7 +237,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [t, toast]);
 
   const internalGetRandomPiece = useCallback(() => {
-    // TODO: Integrate customMinoesData here if customMinoesEnabledInternal is true
     return getRandomPieceLogic(emojiSet, pieceBag, customMinoesDataInternal, customMinoesEnabledInternal);
   }, [emojiSet, pieceBag, customMinoesDataInternal, customMinoesEnabledInternal]);
 
@@ -243,7 +244,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const pieceForCurrent = pieceToSpawnInsteadOfNext || nextPiece;
     const { piece: newNextPieceVal, newBag } = internalGetRandomPiece();
     
-    setPieceBag(newBag); // pieceBag from getRandomPieceLogic might now be mixed
+    setPieceBag(newBag);
     setNextPiece(newNextPieceVal);
     
     if (pieceForCurrent) {
@@ -262,6 +263,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setCurrentPiece(positionedPiece);
       }
     } else { 
+      // This case typically only happens at the very start of the game
+      // or if nextPiece was somehow null.
       const { piece: firstPiece, newBag: firstBag } = internalGetRandomPiece();
       setPieceBag(firstBag);
       const positionedFirstPiece: CurrentPiece = {
@@ -292,8 +295,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     
     setHeldPiece(null);
     setCanHold(true);
+    setPieceBag([]); // Reset piece bag for a fresh start
 
-    const { piece: firstPieceVal, newBag: bagAfterFirst } = internalGetRandomPiece();
+    // Initialize with an empty bag so the first two pieces are pulled from a full set
+    const { piece: firstPieceVal, newBag: bagAfterFirst } = getRandomPieceLogic(emojiSet, [], customMinoesDataInternal, customMinoesEnabledInternal);
     const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst, customMinoesDataInternal, customMinoesEnabledInternal);
     
     const positionedFirstPiece: CurrentPiece = {
@@ -305,7 +310,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setNextPiece(secondPieceVal);
     setPieceBag(bagAfterSecond);
 
-  }, [emojiSet, internalGetRandomPiece, customMinoesDataInternal, customMinoesEnabledInternal]);
+  }, [emojiSet, customMinoesDataInternal, customMinoesEnabledInternal]);
 
   const lockPieceAndSpawnNew = useCallback((pieceToLock: CurrentPiece) => {
     const boardWithPiece = mergePieceToBoard(pieceToLock, board);
@@ -331,7 +336,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       else if (numLinesCleared === 3) { lineScore = 300; toastMessageKey = "toastLineClearTriple"; }
       else if (numLinesCleared >= 4) { lineScore = 1200; toastMessageKey = "toastLineClearTetris"; }
       
-      if (toastMessageKey && t) { // Ensure t is defined
+      if (toastMessageKey && t) {
         toast({ title: t(toastMessageKey) });
       }
       setScore(prev => prev + lineScore * level);
@@ -344,7 +349,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           setShowLevelUpConfetti(true);
           setTimeout(() => setShowLevelUpConfetti(false), LEVEL_UP_CONFETTI_DURATION);
         }
-        if (t) { // Ensure t is defined
+        if (t) {
           toast({ title: t("toastLevelUp", { levelNumber: newLevel.toString() }) });
         }
       }
@@ -361,7 +366,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       spawnNewPiece();
       setCanHold(true);
     }
-  }, [board, linesCleared, level, score, spawnNewPiece, confettiOnLineClearEnabledInternal, confettiOnLevelUpEnabledInternal, internalGetRandomPiece, t, toast]); 
+  }, [board, linesCleared, level, score, spawnNewPiece, confettiOnLineClearEnabledInternal, confettiOnLevelUpEnabledInternal, t, toast]); 
 
   const processMoveDown = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0 || showLineClearConfetti || showLevelUpConfetti) return;
@@ -376,20 +381,35 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const holdPiece = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || !canHold || animatingRows.length > 0) return;
 
+    // Determine the canonical shape for the held piece (first rotation for standard, original for custom)
+    let shapeForHold: number[][];
+    let typeForHold: TetrominoType | "custom" = currentPiece.type;
+    let idForHold: string | undefined = currentPiece.id;
+
+    if (currentPiece.type !== "custom") {
+      shapeForHold = TETROMINOES[currentPiece.type].shapes[0];
+    } else {
+      shapeForHold = currentPiece.shape;
+    }
+
+
     const pieceToStoreInHold: CurrentPiece = { 
         ...currentPiece, 
-        x: Math.floor(BOARD_WIDTH / 2) - Math.floor((currentPiece.shape[0]?.length || 1) / 2),
+        shape: shapeForHold, // Use canonical shape
+        type: typeForHold,
+        id: idForHold,
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor((shapeForHold[0]?.length || 1) / 2),
         y: 0,
-        rotation: 0 // Reset rotation for held piece
+        rotation: 0 // Reset rotation for held piece display and when it comes back
     };
 
     if (!heldPiece) {
       setHeldPiece(pieceToStoreInHold);
       spawnNewPiece(); 
     } else {
-      const pieceFromHold = heldPiece;
+      const pieceFromHold = heldPiece; // This already has its canonical shape and 0 rotation
       setHeldPiece(pieceToStoreInHold);
-      spawnNewPiece(pieceFromHold); 
+      spawnNewPiece(pieceFromHold); // Spawn with the piece from hold
     }
     setCanHold(false);
   }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows]);
@@ -422,8 +442,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const rotatePieceInternal = (direction: 'cw' | 'ccw') => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
-    // Custom pieces don't rotate for now
-    if (currentPiece.type === "custom") return;
+    // Custom pieces don't rotate (handled by rotatePieceLogic)
     const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction);
     setCurrentPiece(rotated);
   };

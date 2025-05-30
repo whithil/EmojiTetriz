@@ -1,32 +1,78 @@
 
-import type { Board, Cell, CurrentPiece, EmojiSet, TetrominoType } from "./tetris-constants";
+import type { Board, Cell, CurrentPiece, EmojiSet, TetrominoType, CustomMinoData } from "./tetris-constants";
 import { BOARD_WIDTH, BOARD_HEIGHT, TETROMINOES, TETROMINO_TYPES } from "./tetris-constants";
 
 export const createEmptyBoard = (): Board =>
   Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(null));
 
-export const getRandomPiece = (emojiSet: EmojiSet, pieceBag: TetrominoType[]): { piece: CurrentPiece, newBag: TetrominoType[] } => {
-  let newBag = [...pieceBag];
-  if (newBag.length === 0) {
-    // Refill bag with shuffled tetromino types
-    newBag = [...TETROMINO_TYPES].sort(() => Math.random() - 0.5);
+export const getRandomPieceLogic = (
+  emojiSet: EmojiSet,
+  currentPieceBag: Array<TetrominoType | string>, // string for custom mino ID
+  allCustomMinoes: CustomMinoData[],
+  customMinoesEnabled: boolean
+): { piece: CurrentPiece; newBag: Array<TetrominoType | string> } => {
+  let newBagInternal = [...currentPieceBag];
+  
+  const availablePieceIdentifiers: Array<TetrominoType | string> = [...TETROMINO_TYPES];
+  if (customMinoesEnabled && allCustomMinoes.length > 0) {
+    allCustomMinoes.forEach(customMino => availablePieceIdentifiers.push(customMino.id));
+  }
+
+  if (newBagInternal.length === 0) {
+    // Refill bag with shuffled available piece identifiers
+    newBagInternal = [...availablePieceIdentifiers].sort(() => Math.random() - 0.5);
   }
   
-  const type = newBag.pop()!; // Assert non-null as bag is refilled if empty
-  const pieceData = TETROMINOES[type];
+  const identifier = newBagInternal.pop()!; 
+  let pieceDetails: Omit<CurrentPiece, 'x' | 'y' | 'rotation'>;
+
+  // Check if it's a standard TetrominoType
+  const standardPieceType = TETROMINO_TYPES.find(t => t === identifier as TetrominoType);
+
+  if (standardPieceType) {
+    const tetMino = TETROMINOES[standardPieceType];
+    pieceDetails = {
+      shape: tetMino.shapes[0], // Default to the first rotation
+      emoji: emojiSet[standardPieceType] || tetMino.emoji,
+      type: standardPieceType,
+    };
+  } else { // Must be a custom mino ID
+    const customMino = allCustomMinoes.find(cm => cm.id === identifier);
+    if (!customMino) {
+      // Fallback if custom mino ID not found (should not happen if bag is managed correctly)
+      // This could happen if a custom mino was deleted but its ID was still in the bag
+      // For now, let's pick a random standard piece as a fallback
+      console.warn(`Custom mino with ID ${identifier} not found, falling back to standard piece.`);
+      const fallbackType = TETROMINO_TYPES[Math.floor(Math.random() * TETROMINO_TYPES.length)];
+      const fallbackTetMino = TETROMINOES[fallbackType];
+      pieceDetails = {
+        shape: fallbackTetMino.shapes[0],
+        emoji: emojiSet[fallbackType] || fallbackTetMino.emoji,
+        type: fallbackType,
+      };
+       // Attempt to clean the bag by removing the invalid identifier
+      newBagInternal = newBagInternal.filter(id => id !== identifier);
+    } else {
+       pieceDetails = {
+        shape: customMino.shape, // Custom shapes are single arrays (number[][])
+        emoji: customMino.emoji,
+        type: "custom",
+        id: customMino.id,
+      };
+    }
+  }
   
   return {
     piece: {
-      x: Math.floor(BOARD_WIDTH / 2) - Math.floor(pieceData.shapes[0][0].length / 2),
-      y: 0,
-      shape: pieceData.shapes[0],
-      emoji: emojiSet[type] || pieceData.emoji,
-      type: type,
+      ...pieceDetails,
+      x: Math.floor(BOARD_WIDTH / 2) - Math.floor((pieceDetails.shape[0]?.length || 1) / 2),
+      y: 0, // Start at the top or just below visibility for pieces that are taller than 1 row at their highest point
       rotation: 0,
     },
-    newBag
+    newBag: newBagInternal
   };
 };
+
 
 export const checkCollision = (piece: CurrentPiece, board: Board, { xOffset = 0, yOffset = 0 }: { xOffset?: number; yOffset?: number }): boolean => {
   for (let y = 0; y < piece.shape.length; y++) {
@@ -48,6 +94,10 @@ export const checkCollision = (piece: CurrentPiece, board: Board, { xOffset = 0,
 };
 
 export const rotatePieceLogic = (piece: CurrentPiece, board: Board, emojiSet: EmojiSet, direction: 'cw' | 'ccw'): CurrentPiece => {
+  if (piece.type === "custom") { // Custom pieces do not rotate for now
+    return piece;
+  }
+
   const originalRotation = piece.rotation;
   const originalX = piece.x;
   const originalY = piece.y;
@@ -62,7 +112,7 @@ export const rotatePieceLogic = (piece: CurrentPiece, board: Board, emojiSet: Em
   
   let newShape = TETROMINOES[piece.type].shapes[newRotation];
   
-  const newPiece: CurrentPiece = {
+  const newPiecePartial: CurrentPiece = {
     ...piece,
     shape: newShape,
     rotation: newRotation,
@@ -80,10 +130,13 @@ export const rotatePieceLogic = (piece: CurrentPiece, board: Board, emojiSet: Em
   ];
 
   for (const kick of kicks) {
-    newPiece.x = originalX + kick.x;
-    newPiece.y = originalY + kick.y;
-    if (!checkCollision(newPiece, board, {})) {
-      return newPiece;
+    const kickedPiece = {
+        ...newPiecePartial,
+        x: originalX + kick.x,
+        y: originalY + kick.y
+    }
+    if (!checkCollision(kickedPiece, board, {})) {
+      return kickedPiece;
     }
   }
   
@@ -99,7 +152,11 @@ export const mergePieceToBoard = (piece: CurrentPiece, board: Board): Board => {
         const boardY = piece.y + y;
         const boardX = piece.x + x;
         if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-           newBoard[boardY][boardX] = { emoji: piece.emoji, type: piece.type };
+           newBoard[boardY][boardX] = { 
+             emoji: piece.emoji, 
+             type: piece.type,
+             id: piece.type === "custom" ? piece.id : undefined 
+            };
         }
       }
     });
@@ -140,4 +197,3 @@ export const getGhostPiece = (currentPiece: CurrentPiece, board: Board): Current
   }
   return ghostPiece;
 };
-
