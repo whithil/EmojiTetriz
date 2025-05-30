@@ -20,7 +20,7 @@ import {
   INITIAL_SCORE,
   INITIAL_LINES_CLEARED,
   DEFAULT_EMOJI_SET,
-  TETROMINOES, // Added TETROMINOES to imports
+  TETROMINOES, 
   TETROMINO_TYPES,
   DEFAULT_KEYBOARD_MAPPINGS,
   DEFAULT_GAMEPAD_MAPPINGS,
@@ -126,7 +126,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useLocalization();
   const { toast } = useToast();
 
-  // Load settings from localStorage on mount
   useEffect(() => {
     const loadFromLocalStorage = <T,>(key: string, defaultValue: T, parser?: (val: string) => T): T => {
       if (typeof window === 'undefined') return defaultValue;
@@ -167,7 +166,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           delete newMappings[act];
         }
       });
-      localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(newMappings));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(newMappings));
+      }
       return newMappings;
     });
   }, []);
@@ -180,7 +181,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
            delete newMappings[act];
         }
       });
-      localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(newMappings));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(newMappings));
+      }
       return newMappings;
     });
   }, []);
@@ -188,36 +191,48 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const resetControlMappings = useCallback(() => {
     setKeyboardMappingsInternal(DEFAULT_KEYBOARD_MAPPINGS);
     setGamepadMappingsInternal(DEFAULT_GAMEPAD_MAPPINGS);
-    localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(DEFAULT_KEYBOARD_MAPPINGS));
-    localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(DEFAULT_GAMEPAD_MAPPINGS));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(DEFAULT_KEYBOARD_MAPPINGS));
+      localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(DEFAULT_GAMEPAD_MAPPINGS));
+    }
   }, []);
 
 
   const setEmojiSet = useCallback((newEmojiSet: EmojiSet) => {
     setEmojiSetState(newEmojiSet);
-    localStorage.setItem(LOCAL_STORAGE_EMOJI_SET_KEY, JSON.stringify(newEmojiSet));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_EMOJI_SET_KEY, JSON.stringify(newEmojiSet));
+    }
   }, []);
 
   const setConfettiOnLineClearEnabled = useCallback((enabled: boolean) => {
     setConfettiOnLineClearEnabledInternalState(enabled);
-    localStorage.setItem(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, JSON.stringify(enabled));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, JSON.stringify(enabled));
+    }
   }, []);
 
   const setConfettiOnLevelUpEnabled = useCallback((enabled: boolean) => {
     setConfettiOnLevelUpEnabledInternalState(enabled);
-    localStorage.setItem(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, JSON.stringify(enabled));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, JSON.stringify(enabled));
+    }
   }, []);
 
   const setCustomMinoesEnabled = useCallback((enabled: boolean) => {
     setCustomMinoesEnabledInternalState(enabled);
-    localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, JSON.stringify(enabled));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, JSON.stringify(enabled));
+    }
   }, []);
 
   const addCustomMino = useCallback((minoData: Omit<CustomMinoData, 'id'>) => {
     setCustomMinoesDataInternal(prev => {
-      const newMino = { ...minoData, id: Date.now().toString() }; // Simple unique ID
+      const newMino = { ...minoData, id: Date.now().toString() }; 
       const newData = [...prev, newMino];
-      localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
+      }
       toast({ title: t("customMinoAdded"), description: t("customMinoAddedDesc", { name: newMino.name }) });
       return newData;
     });
@@ -227,8 +242,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setCustomMinoesDataInternal(prev => {
       const minoToRemove = prev.find(m => m.id === id);
       const newData = prev.filter(mino => mino.id !== id);
-      localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
-      // Also remove from pieceBag if it's there
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
+      }
       setPieceBag(currentBag => currentBag.filter(bagItemId => bagItemId !== id));
       if (minoToRemove) {
         toast({ title: t("customMinoRemoved"), description: t("customMinoRemovedDesc", { name: minoToRemove.name }), variant: "destructive" });
@@ -264,8 +280,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setCurrentPiece(positionedPiece);
       }
     } else {
-      // This case typically only happens at the very start of the game
-      // or if nextPiece was somehow null.
       const { piece: firstPiece, newBag: firstBag } = internalGetRandomPiece();
       setPieceBag(firstBag);
       const positionedFirstPiece: CurrentPiece = {
@@ -296,9 +310,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     setHeldPiece(null);
     setCanHold(true);
-    setPieceBag([]); // Reset piece bag for a fresh start
+    setPieceBag([]); 
 
-    // Initialize with an empty bag so the first two pieces are pulled from a full set
     const { piece: firstPieceVal, newBag: bagAfterFirst } = getRandomPieceLogic(emojiSet, [], customMinoesDataInternal, customMinoesEnabledInternal);
     const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst, customMinoesDataInternal, customMinoesEnabledInternal);
 
@@ -382,38 +395,46 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const holdPiece = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || !canHold || animatingRows.length > 0) return;
 
-    // Determine the canonical shape for the held piece (first rotation for standard, original for custom)
     let shapeForHold: number[][];
     let typeForHold: TetrominoType | "custom" = currentPiece.type;
     let idForHold: string | undefined = currentPiece.id;
+    let emojiForHold: string = currentPiece.emoji;
 
     if (currentPiece.type !== "custom") {
-      shapeForHold = TETROMINOES[currentPiece.type].shapes[0];
+      shapeForHold = TETROMINOES[currentPiece.type].shapes[0]; 
+      emojiForHold = emojiSet[currentPiece.type] || TETROMINOES[currentPiece.type].emoji;
     } else {
-      shapeForHold = currentPiece.shape;
+      const customMinoDefinition = customMinoesDataInternal.find(m => m.id === currentPiece.id);
+      if (customMinoDefinition) {
+        shapeForHold = customMinoDefinition.shape;
+        emojiForHold = customMinoDefinition.emoji;
+      } else {
+        shapeForHold = currentPiece.shape; // Fallback
+        emojiForHold = currentPiece.emoji;
+        console.warn(`Custom mino definition not found for ID ${currentPiece.id} during hold. Using current shape.`);
+      }
     }
 
-
     const pieceToStoreInHold: CurrentPiece = {
-        ...currentPiece,
-        shape: shapeForHold, // Use canonical shape
-        type: typeForHold,
-        id: idForHold,
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((shapeForHold[0]?.length || 1) / 2),
         y: 0,
-        rotation: 0 // Reset rotation for held piece display and when it comes back
+        rotation: 0, 
+        shape: shapeForHold,
+        emoji: emojiForHold,
+        type: typeForHold,
+        id: idForHold,
     };
 
     if (!heldPiece) {
       setHeldPiece(pieceToStoreInHold);
       spawnNewPiece();
     } else {
-      const pieceFromHold = heldPiece; // This already has its canonical shape and 0 rotation
+      const pieceFromHold = heldPiece; 
       setHeldPiece(pieceToStoreInHold);
-      spawnNewPiece(pieceFromHold); // Spawn with the piece from hold
+      spawnNewPiece(pieceFromHold); 
     }
     setCanHold(false);
-  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows, board, emojiSet]); // Added board, emojiSet as dependencies
+  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows, board, emojiSet, customMinoesDataInternal]); 
 
 
   useEffect(() => {
@@ -443,7 +464,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const rotatePieceInternal = (direction: 'cw' | 'ccw') => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
-    // Custom pieces don't rotate (handled by rotatePieceLogic)
     const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction);
     setCurrentPiece(rotated);
   };
@@ -452,7 +472,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
     setIsSoftDropping(true);
     processMoveDown();
-    setTimeout(() => setIsSoftDropping(false), 50);
+    setTimeout(() => setIsSoftDropping(false), 50); 
   };
 
   const hardDrop = () => {

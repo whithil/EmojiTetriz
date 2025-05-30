@@ -18,30 +18,47 @@ export const getRandomPieceLogic = (
     allCustomMinoes.forEach(customMino => availablePieceIdentifiers.push(customMino.id));
   }
 
-  if (newBagInternal.length === 0) {
+  if (newBagInternal.length === 0 && availablePieceIdentifiers.length > 0) {
     // Refill bag with shuffled available piece identifiers
     newBagInternal = [...availablePieceIdentifiers].sort(() => Math.random() - 0.5);
+  } else if (availablePieceIdentifiers.length === 0) {
+    // Should not happen if there are standard pieces, but as a safeguard
+    // If no pieces are available at all (e.g. standard disabled and no custom)
+    // This will become an issue. For now, assume standard pieces are always implicitly available.
+    // Or, throw an error / return a dummy piece.
+    // For now, if bag is empty and no available identifiers, means we can't generate. This is an edge case.
+    // Let's ensure the bag is refilled if empty AND there are identifiers to fill it with.
+    // If availablePieceIdentifiers is empty, the game would be unplayable; this logic assumes it's not.
+    const fallbackType = TETROMINO_TYPES[0]; // Default to 'I' if everything else fails
+    const tetMino = TETROMINOES[fallbackType];
+     return {
+        piece: {
+            shape: tetMino.shapes[0],
+            emoji: emojiSet[fallbackType] || tetMino.emoji,
+            type: fallbackType,
+            x: Math.floor(BOARD_WIDTH / 2) - Math.floor((tetMino.shapes[0][0]?.length || 1) / 2),
+            y: 0,
+            rotation: 0,
+        },
+        newBag: [] // Bag remains empty
+     };
   }
   
   const identifier = newBagInternal.pop()!; 
   let pieceDetails: Omit<CurrentPiece, 'x' | 'y' | 'rotation'>;
 
-  // Check if it's a standard TetrominoType
   const standardPieceType = TETROMINO_TYPES.find(t => t === identifier as TetrominoType);
 
   if (standardPieceType) {
     const tetMino = TETROMINOES[standardPieceType];
     pieceDetails = {
-      shape: tetMino.shapes[0], // Default to the first rotation
+      shape: tetMino.shapes[0],
       emoji: emojiSet[standardPieceType] || tetMino.emoji,
       type: standardPieceType,
     };
-  } else { // Must be a custom mino ID
+  } else { 
     const customMino = allCustomMinoes.find(cm => cm.id === identifier);
     if (!customMino) {
-      // Fallback if custom mino ID not found (should not happen if bag is managed correctly)
-      // This could happen if a custom mino was deleted but its ID was still in the bag
-      // For now, let's pick a random standard piece as a fallback
       console.warn(`Custom mino with ID ${identifier} not found, falling back to standard piece.`);
       const fallbackType = TETROMINO_TYPES[Math.floor(Math.random() * TETROMINO_TYPES.length)];
       const fallbackTetMino = TETROMINOES[fallbackType];
@@ -50,11 +67,10 @@ export const getRandomPieceLogic = (
         emoji: emojiSet[fallbackType] || fallbackTetMino.emoji,
         type: fallbackType,
       };
-       // Attempt to clean the bag by removing the invalid identifier
       newBagInternal = newBagInternal.filter(id => id !== identifier);
     } else {
        pieceDetails = {
-        shape: customMino.shape, // Custom shapes are single arrays (number[][])
+        shape: customMino.shape, 
         emoji: customMino.emoji,
         type: "custom",
         id: customMino.id,
@@ -66,7 +82,7 @@ export const getRandomPieceLogic = (
     piece: {
       ...pieceDetails,
       x: Math.floor(BOARD_WIDTH / 2) - Math.floor((pieceDetails.shape[0]?.length || 1) / 2),
-      y: 0, // Start at the top or just below visibility for pieces that are taller than 1 row at their highest point
+      y: 0, 
       rotation: 0,
     },
     newBag: newBagInternal
@@ -82,10 +98,10 @@ export const checkCollision = (piece: CurrentPiece, board: Board, { xOffset = 0,
         const newY = piece.y + y + yOffset;
 
         if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) {
-          return true; // Collision with wall or bottom
+          return true; 
         }
         if (newY >= 0 && board[newY] && board[newY][newX] !== null) {
-          return true; // Collision with another piece
+          return true; 
         }
       }
     }
@@ -93,11 +109,60 @@ export const checkCollision = (piece: CurrentPiece, board: Board, { xOffset = 0,
   return false;
 };
 
+function rotateMatrixCW(matrix: number[][]): number[][] {
+  const rows = matrix.length;
+  if (rows === 0) return [];
+  const cols = matrix[0]?.length || 0;
+  if (cols === 0) return matrix.map(() => []);
+
+  const newMatrix: number[][] = Array(cols).fill(null).map(() => Array(rows).fill(0));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      newMatrix[c][rows - 1 - r] = matrix[r][c];
+    }
+  }
+  return newMatrix;
+}
+
+function rotateMatrixCCW(matrix: number[][]): number[][] {
+  const rows = matrix.length;
+  if (rows === 0) return [];
+  const cols = matrix[0]?.length || 0;
+  if (cols === 0) return matrix.map(() => []);
+
+  const newMatrix: number[][] = Array(cols).fill(null).map(() => Array(rows).fill(0));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      newMatrix[cols - 1 - c][r] = matrix[r][c];
+    }
+  }
+  return newMatrix;
+}
+
 export const rotatePieceLogic = (piece: CurrentPiece, board: Board, emojiSet: EmojiSet, direction: 'cw' | 'ccw'): CurrentPiece => {
-  if (piece.type === "custom") { // Custom pieces do not rotate for now
-    return piece;
+  if (piece.type === "custom") {
+    let newCustomShape: number[][];
+    if (direction === 'cw') {
+      newCustomShape = rotateMatrixCW(piece.shape);
+    } else { // ccw
+      newCustomShape = rotateMatrixCCW(piece.shape);
+    }
+
+    const newPieceCandidate: CurrentPiece = {
+      ...piece,
+      shape: newCustomShape,
+      rotation: (piece.rotation + (direction === 'cw' ? 1 : -1) + 4) % 4, // Update rotation number
+    };
+
+    // Check for collision without kicks for simplicity
+    if (!checkCollision(newPieceCandidate, board, {})) {
+      return newPieceCandidate;
+    } else {
+      return piece; // Rotation failed due to collision
+    }
   }
 
+  // Standard piece rotation logic
   const originalRotation = piece.rotation;
   const originalX = piece.x;
   const originalY = piece.y;
@@ -119,14 +184,10 @@ export const rotatePieceLogic = (piece: CurrentPiece, board: Board, emojiSet: Em
     emoji: emojiSet[piece.type] || TETROMINOES[piece.type].emoji,
   };
 
-  // Basic wall kick logic (try moving piece if rotation causes collision)
   const kicks = [
-    { x: 0, y: 0 }, // No kick
-    { x: 1, y: 0 }, // Kick right
-    { x: -1, y: 0 }, // Kick left
-    { x: 2, y: 0 }, // Kick right twice
-    { x: -2, y: 0 }, // Kick left twice
-    { x: 0, y: -1 }, // Kick up (for I-piece mainly)
+    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 },
+    { x: 2, y: 0 }, { x: -2, y: 0 }, { x: 0, y: -1 },
+    // Add more kicks specific to piece types (especially I) if needed for full SRS-like behavior
   ];
 
   for (const kick of kicks) {
@@ -140,7 +201,6 @@ export const rotatePieceLogic = (piece: CurrentPiece, board: Board, emojiSet: Em
     }
   }
   
-  // If all kicks fail, revert to original piece (no rotation)
   return piece; 
 };
 
@@ -197,3 +257,4 @@ export const getGhostPiece = (currentPiece: CurrentPiece, board: Board): Current
   }
   return ghostPiece;
 };
+
