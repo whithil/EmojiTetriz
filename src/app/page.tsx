@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GameBoard } from "@/components/game/GameBoard";
 import { PiecePreview } from "@/components/game/PiecePreview";
+import { HeldPiecePreview } from "@/components/game/HeldPiecePreview"; // Import HeldPiecePreview
 import { GameInfoPanel } from "@/components/game/GameInfoPanel";
 import { GameControls } from "@/components/game/GameControls";
 import { GameOverOverlay } from "@/components/game/GameOverOverlay";
@@ -12,23 +13,22 @@ import { SettingsModal } from "@/components/settings/SettingsModal";
 import { SoundtrackSuggestionButton } from "@/components/game/SoundtrackSuggestionToast";
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Button } from "@/components/ui/button"; // For initial play button
+import { Button } from "@/components/ui/button"; 
 import { Play } from "lucide-react";
 
 export default function HomePage() {
   const { 
-    board, currentPiece, nextPiece, ghostPiece, score, level, linesCleared, gameState, startGame 
+    board, currentPiece, nextPiece, ghostPiece, heldPiece, // Add heldPiece
+    score, level, linesCleared, gameState, startGame 
   } = useGameContext();
   const { t } = useLocalization();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // Keyboard listener for opening settings (e.g., Escape key or a specific combo)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isSettingsModalOpen) {
         setIsSettingsModalOpen(false);
       }
-      // Could add another keybind to open settings if desired
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -39,17 +39,16 @@ export default function HomePage() {
       <AppHeader onSettingsClick={() => setIsSettingsModalOpen(true)} />
       <main className="flex-grow container mx-auto px-2 py-4 md:py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-start">
-          {/* Left Panel (Next Piece, Info, Controls) - on mobile, these might stack or be rearranged */}
           <div className="md:col-span-1 space-y-4 order-2 md:order-1">
+            <HeldPiecePreview piece={heldPiece} title={t("holdPieceTitle")} />
             <PiecePreview piece={nextPiece} title={t("nextPiece")} />
             <GameInfoPanel score={score} level={level} linesCleared={linesCleared} />
             <GameControls />
             <SoundtrackSuggestionButton />
           </div>
 
-          {/* Center Panel (Game Board) */}
           <div className="md:col-span-2 relative order-1 md:order-2">
-            {gameState === "gameOver" && !currentPiece && ( // Show initial play button if game hasn't started
+            {gameState === "gameOver" && !currentPiece && ( 
               <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg">
                  <h1 className="text-4xl font-bold text-primary mb-6">{t("appName")}</h1>
                 <Button onClick={startGame} size="lg" className="text-xl py-8 px-10 animate-pulse">
@@ -69,3 +68,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

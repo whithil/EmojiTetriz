@@ -10,6 +10,8 @@
   "level": "Level",
   "lines": "Lines",
   "nextPiece": "Next",
+  "holdPieceTitle": "Hold",
+  "holdButton": "Hold",
   "settings": "Settings",
   "emojiSettings": "Emoji Settings",
   "themeSharing": "Theme Sharing",
@@ -36,3 +38,5 @@
   "suggestionLoading": "Getting suggestion...",
   "suggestionError": "Could not get a suggestion at this time."
 }
+
+    

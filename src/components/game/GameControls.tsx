@@ -2,42 +2,45 @@
 "use client";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ArrowLeft, ArrowRight, ArrowDown, ArrowUp, Zap, Play, PauseIcon } from "lucide-react";
+import { RotateCcw, ArrowLeft, ArrowRight, ArrowDown, ArrowUp, Zap, Play, PauseIcon, RotateCwSquare } from "lucide-react"; // Using RotateCwSquare for Hold
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 
 export function GameControls() {
   const { 
     gameState, startGame, pauseGame, resumeGame, 
-    moveLeft, moveRight, rotatePiece, softDrop, hardDrop 
+    moveLeft, moveRight, rotatePiece, softDrop, hardDrop, holdPiece, canHold
   } = useGameContext();
   const { t } = useLocalization();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (gameState === "gameOver") return;
+      if (gameState === "gameOver" || (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)) return;
 
-      switch (event.key) {
-        case "ArrowLeft":
+
+      switch (event.key.toLowerCase()) { // Convert to lowercase for case-insensitivity
+        case "arrowleft":
           moveLeft();
           break;
-        case "ArrowRight":
+        case "arrowright":
           moveRight();
           break;
-        case "ArrowDown":
+        case "arrowdown":
           softDrop();
           break;
-        case "ArrowUp":
+        case "arrowup":
           rotatePiece();
           break;
         case " ": // Space bar
-          event.preventDefault(); // Prevent page scroll
+          event.preventDefault(); 
           hardDrop();
           break;
         case "p":
-        case "P":
           if (gameState === "playing") pauseGame();
           else if (gameState === "paused") resumeGame();
+          break;
+        case "c": // 'C' key for Hold
+           if (gameState === "playing") holdPiece();
           break;
       }
     };
@@ -46,7 +49,7 @@ export function GameControls() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [gameState, moveLeft, moveRight, rotatePiece, softDrop, hardDrop, pauseGame, resumeGame]);
+  }, [gameState, moveLeft, moveRight, rotatePiece, softDrop, hardDrop, pauseGame, resumeGame, holdPiece]);
 
   const mainAction = () => {
     if (gameState === "gameOver") startGame();
@@ -74,13 +77,19 @@ export function GameControls() {
       </Button>
       {gameState !== "gameOver" && (
          <div className="grid grid-cols-3 gap-2">
-         <Button variant="outline" onClick={moveLeft} aria-label="Move Left" className="py-4"><ArrowLeft /></Button>
-         <Button variant="outline" onClick={softDrop} aria-label="Move Down" className="py-4"><ArrowDown /></Button>
-         <Button variant="outline" onClick={moveRight} aria-label="Move Right" className="py-4"><ArrowRight /></Button>
-         <Button variant="outline" onClick={rotatePiece} aria-label="Rotate" className="py-4 col-span-1"><RotateCcw /></Button>
-         <Button variant="outline" onClick={hardDrop} aria-label="Hard Drop" className="py-4 col-span-2"><Zap className="mr-2"/> Drop</Button>
-       </div>
+           <Button variant="outline" onClick={holdPiece} disabled={!canHold || gameState !== 'playing'} aria-label={t("holdButton")} className="py-4 col-span-1">
+             <RotateCwSquare className="mr-1 h-5 w-5"/> {t("holdButton")}
+           </Button>
+           <Button variant="outline" onClick={rotatePiece} aria-label="Rotate" className="py-4 col-span-1"><RotateCcw /></Button>
+           <Button variant="outline" onClick={hardDrop} aria-label="Hard Drop" className="py-4 col-span-1"><Zap/></Button>
+           
+           <Button variant="outline" onClick={moveLeft} aria-label="Move Left" className="py-4"><ArrowLeft /></Button>
+           <Button variant="outline" onClick={softDrop} aria-label="Move Down" className="py-4"><ArrowDown /></Button>
+           <Button variant="outline" onClick={moveRight} aria-label="Move Right" className="py-4"><ArrowRight /></Button>
+         </div>
       )}
     </div>
   );
 }
+
+    

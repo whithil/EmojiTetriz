@@ -10,6 +10,8 @@
   "level": "Nível",
   "lines": "Linhas",
   "nextPiece": "Próxima",
+  "holdPieceTitle": "Guardar",
+  "holdButton": "Guardar",
   "settings": "Configurações",
   "emojiSettings": "Configurações de Emoji",
   "themeSharing": "Compartilhar Tema",
@@ -36,3 +38,5 @@
   "suggestionLoading": "Obtendo sugestão...",
   "suggestionError": "Não foi possível obter uma sugestão no momento."
 }
+
+    

@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { Board, CurrentPiece, EmojiSet, GameState, TetrominoType } from "@/lib/tetris-constants";
 import { 
   createEmptyBoard, 
-  getRandomPiece, 
+  getRandomPiece as getRandomPieceLogic, 
   checkCollision, 
   rotatePiece as rotateLogic, 
   mergePieceToBoard, 
@@ -14,6 +14,7 @@ import {
 } from "@/lib/tetris-logic";
 import { 
   BOARD_HEIGHT,
+  BOARD_WIDTH, // Added for positioning new pieces
   INITIAL_LEVEL, 
   INITIAL_SCORE, 
   INITIAL_LINES_CLEARED, 
@@ -27,6 +28,8 @@ interface GameContextType {
   currentPiece: CurrentPiece | null;
   nextPiece: CurrentPiece | null;
   ghostPiece: CurrentPiece | null;
+  heldPiece: CurrentPiece | null;
+  canHold: boolean;
   score: number;
   level: number;
   linesCleared: number;
@@ -41,6 +44,7 @@ interface GameContextType {
   rotatePiece: () => void;
   softDrop: () => void;
   hardDrop: () => void;
+  holdPiece: () => void;
   setEmojiSet: (newEmojiSet: EmojiSet) => void;
   getCurrentGameStateForAI: () => { score: number; level: number; linesCleared: number; gameState: GameState };
 }
@@ -55,11 +59,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [currentPiece, setCurrentPiece] = useState<CurrentPiece | null>(null);
   const [nextPiece, setNextPiece] = useState<CurrentPiece | null>(null);
   const [ghostPiece, setGhostPiece] = useState<CurrentPiece | null>(null);
+  const [heldPiece, setHeldPiece] = useState<CurrentPiece | null>(null);
+  const [canHold, setCanHold] = useState<boolean>(true);
   const [pieceBag, setPieceBag] = useState<TetrominoType[]>([]);
   const [score, setScore] = useState(INITIAL_SCORE);
   const [level, setLevel] = useState(INITIAL_LEVEL);
   const [linesCleared, setLinesCleared] = useState(INITIAL_LINES_CLEARED);
-  const [gameState, setGameState] = useState<GameState>("gameOver"); // Start in gameOver state
+  const [gameState, setGameState] = useState<GameState>("gameOver");
   const [emojiSet, setEmojiSetState] = useState<EmojiSet>(DEFAULT_EMOJI_SET);
   const [gameSpeed, setGameSpeed] = useState(calculateGameSpeed(INITIAL_LEVEL));
   const [isSoftDropping, setIsSoftDropping] = useState(false);
@@ -76,7 +82,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (storedEmojiSet) {
       try {
         const parsedEmojiSet = JSON.parse(storedEmojiSet) as EmojiSet;
-        // Basic validation: ensure all types exist
         let valid = true;
         for(const type of TETROMINO_TYPES) {
           if(!parsedEmojiSet[type]) {
@@ -86,28 +91,49 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         }
         if(valid) setEmojiSetState(parsedEmojiSet);
         else setEmojiSetState(DEFAULT_EMOJI_SET);
-
       } catch (e) {
         setEmojiSetState(DEFAULT_EMOJI_SET);
       }
     }
   }, []);
 
-  const spawnNewPiece = useCallback(() => {
-    const currentIsNext = nextPiece;
-    const { piece: newNextPieceVal, newBag } = getRandomPiece(emojiSet, pieceBag);
-    setPieceBag(newBag);
+  const internalGetRandomPiece = useCallback(() => {
+    return getRandomPieceLogic(emojiSet, pieceBag);
+  }, [emojiSet, pieceBag]);
+
+  const spawnNewPiece = useCallback((pieceToSpawn?: CurrentPiece) => {
+    const pieceForCurrent = pieceToSpawn || nextPiece;
+    const { piece: newNextPieceVal, newBag } = internalGetRandomPiece();
     
-    if (currentIsNext) {
-      if (checkCollision(currentIsNext, board, {})) {
+    setPieceBag(newBag);
+    setNextPiece(newNextPieceVal);
+    
+    if (pieceForCurrent) {
+      const positionedPiece: CurrentPiece = {
+        ...pieceForCurrent,
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(pieceForCurrent.shape[0].length / 2),
+        y: 0, 
+      };
+
+      if (checkCollision(positionedPiece, board, {})) {
         setGameState("gameOver");
         setCurrentPiece(null);
+        setNextPiece(null); 
+        setHeldPiece(null);
       } else {
-        setCurrentPiece(currentIsNext);
+        setCurrentPiece(positionedPiece);
+      }
+    } else { // Should only happen if nextPiece was null, e.g. at very start or error
+      const { piece: firstPiece, newBag: firstBag } = internalGetRandomPiece();
+      setPieceBag(firstBag);
+      if (checkCollision(firstPiece, board, {})) {
+         setGameState("gameOver");
+         setCurrentPiece(null);
+      } else {
+        setCurrentPiece(firstPiece);
       }
     }
-    setNextPiece(newNextPieceVal);
-  }, [nextPiece, board, emojiSet, pieceBag]);
+  }, [nextPiece, board, internalGetRandomPiece]);
 
 
   const startGame = useCallback(() => {
@@ -118,13 +144,15 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setGameSpeed(calculateGameSpeed(INITIAL_LEVEL));
     setGameState("playing");
     
-    // Initialize piece bag and first two pieces
+    setHeldPiece(null);
+    setCanHold(true);
+
     let initialBag: TetrominoType[] = [...TETROMINO_TYPES].sort(() => Math.random() - 0.5);
-    const { piece: firstPiece, newBag: bagAfterFirst } = getRandomPiece(emojiSet, initialBag);
-    const { piece: secondPiece, newBag: bagAfterSecond } = getRandomPiece(emojiSet, bagAfterFirst);
+    const { piece: firstPieceVal, newBag: bagAfterFirst } = getRandomPieceLogic(emojiSet, initialBag);
+    const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst);
     
-    setCurrentPiece(firstPiece);
-    setNextPiece(secondPiece);
+    setCurrentPiece(firstPieceVal);
+    setNextPiece(secondPieceVal);
     setPieceBag(bagAfterSecond);
 
   }, [emojiSet]);
@@ -136,16 +164,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (!checkCollision(currentPiece, board, { yOffset: 1 })) {
       setCurrentPiece(prev => prev ? { ...prev, y: prev.y + 1 } : null);
     } else {
-      // Lock piece and spawn new
       let newBoard = mergePieceToBoard(currentPiece, board);
       const { board: boardAfterClear, linesCleared: numLinesCleared } = clearLinesLogic(newBoard);
       setBoard(boardAfterClear);
 
       if (numLinesCleared > 0) {
-        const newLinesCleared = linesCleared + numLinesCleared;
-        setLinesCleared(newLinesCleared);
-        // Score based on lines cleared (simple version)
-        // 1 line: 40 * level, 2 lines: 100 * level, 3 lines: 300 * level, 4 lines: 1200 * level
+        const newLinesClearedTotal = linesCleared + numLinesCleared;
+        setLinesCleared(newLinesClearedTotal);
         let lineScore = 0;
         if (numLinesCleared === 1) lineScore = 40;
         else if (numLinesCleared === 2) lineScore = 100;
@@ -153,16 +178,39 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         else if (numLinesCleared >= 4) lineScore = 1200;
         setScore(prev => prev + lineScore * level);
         
-        // Level up every 10 lines
-        const newLevel = Math.floor(newLinesCleared / 10) + 1;
+        const newLevel = Math.floor(newLinesClearedTotal / 10) + 1;
         if (newLevel > level) {
           setLevel(newLevel);
           setGameSpeed(calculateGameSpeed(newLevel));
         }
       }
       spawnNewPiece();
+      setCanHold(true); 
     }
   }, [currentPiece, board, gameState, spawnNewPiece, linesCleared, level, score]);
+
+  const holdPiece = useCallback(() => {
+    if (!currentPiece || gameState !== "playing" || !canHold) return;
+
+    // Create a "clean" version of currentPiece for storing (reset position for preview)
+    const pieceToStoreInHold: CurrentPiece = { 
+        ...currentPiece, 
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(currentPiece.shape[0].length / 2), // Center for preview
+        y: 0 // Top for preview
+    };
+
+    if (!heldPiece) {
+      setHeldPiece(pieceToStoreInHold);
+      spawnNewPiece(); // Current becomes next, new next is drawn
+    } else {
+      const pieceFromHold = heldPiece;
+      setHeldPiece(pieceToStoreInHold);
+      // Spawn the piece that was in hold as the new current piece
+      spawnNewPiece(pieceFromHold); 
+    }
+    setCanHold(false);
+  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, board]);
+
 
   useEffect(() => {
     if (gameState === "playing" && !isSoftDropping) {
@@ -171,7 +219,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [gameState, processMoveDown, gameSpeed, isSoftDropping]);
 
-  // Update ghost piece
   useEffect(() => {
     if (currentPiece && gameState === "playing") {
       setGhostPiece(getGhostPieceLogic(currentPiece, board));
@@ -198,11 +245,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   
   const softDrop = () => {
     if (!currentPiece || gameState !== "playing") return;
-    setIsSoftDropping(true); // Indicate soft drop is active
+    setIsSoftDropping(true); 
     processMoveDown();
-    // Set a short timeout to reset isSoftDropping, allowing normal gravity to resume smoothly
-    // This also prevents multiple soft drops from stacking intervals if key is held.
-    // A more robust solution might use requestAnimationFrame or better input handling.
     setTimeout(() => setIsSoftDropping(false), 50); 
   };
 
@@ -212,8 +256,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     while (!checkCollision(tempPiece, board, { yOffset: 1 })) {
       tempPiece.y += 1;
     }
-    setCurrentPiece(tempPiece);
-    // After hard drop, the piece will lock on the next game tick via processMoveDown
+    // setCurrentPiece(tempPiece); // This was causing a slight visual jump
+    // Instead, directly trigger processMoveDown after positioning for locking
+    setCurrentPiece(prev => prev ? {...tempPiece} : null); // Ensure currentPiece state is updated
+    processMoveDown(); // This will lock the piece and spawn the next one
+
   };
 
   const pauseGame = () => {
@@ -231,8 +278,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <GameContext.Provider value={{
-      board, currentPiece, nextPiece, ghostPiece, score, level, linesCleared, gameState, emojiSet, isSoftDropping,
-      startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece, softDrop, hardDrop, setEmojiSet, getCurrentGameStateForAI
+      board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold, score, level, linesCleared, gameState, emojiSet, isSoftDropping,
+      startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece, softDrop, hardDrop, holdPiece, setEmojiSet, getCurrentGameStateForAI
     }}>
       {children}
     </GameContext.Provider>
@@ -246,3 +293,5 @@ export const useGameContext = () => {
   }
   return context;
 };
+
+    
