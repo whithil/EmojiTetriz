@@ -5,7 +5,8 @@ import { TETROMINO_TYPES, DEFAULT_EMOJI_SET } from "./tetris-constants";
 export const encodeEmojiSet = (emojiSet: EmojiSet): string => {
   try {
     const jsonString = JSON.stringify(emojiSet);
-    return btoa(jsonString);
+    // First, URI-encode the string to handle multi-byte characters, then Base64 encode.
+    return btoa(encodeURIComponent(jsonString));
   } catch (error) {
     console.error("Error encoding emoji set:", error);
     return "";
@@ -14,7 +15,8 @@ export const encodeEmojiSet = (emojiSet: EmojiSet): string => {
 
 export const decodeEmojiSet = (encodedString: string): EmojiSet | null => {
   try {
-    const jsonString = atob(encodedString);
+    // First, Base64 decode, then URI-decode the string.
+    const jsonString = decodeURIComponent(atob(encodedString));
     const decodedSet = JSON.parse(jsonString) as Partial<EmojiSet>;
 
     // Validate structure and content
@@ -40,3 +42,4 @@ export const decodeEmojiSet = (encodedString: string): EmojiSet | null => {
     return null;
   }
 };
+
