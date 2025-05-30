@@ -29,7 +29,7 @@ import {
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
 import { useToast } from "@/hooks/use-toast";
-import { decodeEmojiSet } from "@/lib/theme-utils"; // Added for URL theme parsing
+import { decodeShareableData } from "@/lib/theme-utils"; // Updated import
 
 const LINE_CLEAR_ANIMATION_DURATION = 300; // ms
 const LEVEL_UP_CONFETTI_DURATION = 1500; // ms, should match Confetti.tsx
@@ -74,6 +74,7 @@ interface GameContextType {
   customMinoesData: CustomMinoData[];
   addCustomMino: (minoData: Omit<CustomMinoData, 'id'>) => void;
   removeCustomMino: (id: string) => void;
+  _setCustomMinoesBatch: (newMinoes: CustomMinoData[]) => void; // Exposed for direct setting by ThemeSharing
 
   startGame: () => void;
   pauseGame: () => void;
@@ -133,6 +134,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(LOCAL_STORAGE_EMOJI_SET_KEY, JSON.stringify(newEmojiSet));
     }
   }, []);
+  
+  const _setCustomMinoesBatch = useCallback((newMinoes: CustomMinoData[]) => {
+    setCustomMinoesDataInternal(newMinoes);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newMinoes));
+    }
+  }, []);
+
 
   useEffect(() => {
     const loadFromLocalStorage = <T,>(key: string, defaultValue: T, parser?: (val: string) => T): T => {
@@ -149,35 +158,37 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       return defaultValue;
     };
     
-    let themeAppliedFromUrl = false;
+    let dataAppliedFromUrl = false;
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      const themeFromUrl = urlParams.get('theme');
+      const themeDataFromUrl = urlParams.get('theme');
 
-      if (themeFromUrl) {
-        const decodedTheme = decodeEmojiSet(themeFromUrl);
-        if (decodedTheme) {
-          _setEmojiSet(decodedTheme); // This also saves to localStorage
-          themeAppliedFromUrl = true;
+      if (themeDataFromUrl) {
+        const decodedData = decodeShareableData(themeDataFromUrl);
+        if (decodedData) {
+          _setEmojiSet(decodedData.emojiSet);
+          if (decodedData.customMinoesData) {
+            _setCustomMinoesBatch(decodedData.customMinoesData);
+          }
+          dataAppliedFromUrl = true;
           
-          // Clean the theme parameter from the URL
           const currentUrl = new URL(window.location.href);
           currentUrl.searchParams.delete('theme');
           window.history.replaceState({}, document.title, currentUrl.toString());
         } else {
-          console.warn("Invalid theme string from URL parameter. Falling back to localStorage or default.");
+          console.warn("Invalid theme data from URL parameter. Falling back to localStorage or default.");
         }
       }
     }
 
-    if (!themeAppliedFromUrl) {
+    if (!dataAppliedFromUrl) {
       const parsedEmojiSet = loadFromLocalStorage<EmojiSet>(LOCAL_STORAGE_EMOJI_SET_KEY, DEFAULT_EMOJI_SET, (val) => {
           const parsed = JSON.parse(val) as EmojiSet;
           let valid = true;
           for(const type of TETROMINO_TYPES) { if(!parsed[type]) { valid = false; break; }}
           return valid ? parsed : DEFAULT_EMOJI_SET;
       });
-      setEmojiSetState(parsedEmojiSet); // Use internal setter if _setEmojiSet would cause re-save unnecessarily
+      _setEmojiSet(parsedEmojiSet); // Use internal setter
     }
 
     setKeyboardMappingsInternal(loadFromLocalStorage(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, DEFAULT_KEYBOARD_MAPPINGS));
@@ -216,13 +227,16 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         ]
       };
       loadedCustomMinoes = [defaultJorgeMino, defaultLukaMino];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(loadedCustomMinoes));
-      }
+      _setCustomMinoesBatch(loadedCustomMinoes); // Use batch setter
     }
-    setCustomMinoesDataInternal(loadedCustomMinoes);
+    // If not empty and not from URL, set internal state without re-saving to LS
+    // unless _setCustomMinoesBatch was already called by URL logic
+    if (!dataAppliedFromUrl || !urlParams.get('theme')?.includes('customMinoesData') ) { 
+        setCustomMinoesDataInternal(loadedCustomMinoes);
+    }
 
-  }, [_setEmojiSet]); // _setEmojiSet is stable due to its own useCallback([])
+
+  }, [_setEmojiSet, _setCustomMinoesBatch]);
 
   const updateKeyboardMapping = useCallback((action: GameAction, newKey: string) => {
     setKeyboardMappingsInternal(prev => {
@@ -453,12 +467,17 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const processMoveDown = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0 || showLineClearConfetti || showLevelUpConfetti) return;
 
-    if (!checkCollision(currentPiece, board, { yOffset: 1 })) {
-      setCurrentPiece(prev => prev ? { ...prev, y: prev.y + 1 } : null);
-    } else {
-      lockPieceAndSpawnNew(currentPiece);
-    }
+    setCurrentPiece(prevPiece => {
+        if (!prevPiece) return null;
+        if (!checkCollision(prevPiece, board, { yOffset: 1 })) {
+            return { ...prevPiece, y: prevPiece.y + 1 };
+        } else {
+            lockPieceAndSpawnNew(prevPiece);
+            return null; // Current piece will be reset by spawnNewPiece indirectly or set to null if game over
+        }
+    });
   }, [currentPiece, board, gameState, lockPieceAndSpawnNew, animatingRows, showLineClearConfetti, showLevelUpConfetti]);
+
 
  const holdPiece = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || !canHold || animatingRows.length > 0) return;
@@ -584,7 +603,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       confettiOnLineClearEnabled, setConfettiOnLineClearEnabled: _setConfettiOnLineClearEnabled, showLineClearConfetti,
       confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabled: _setConfettiOnLevelUpEnabled, showLevelUpConfetti,
       customMinoesEnabled, setCustomMinoesEnabled: _setCustomMinoesEnabled,
-      customMinoesData, addCustomMino: _addCustomMino, removeCustomMino: _removeCustomMino,
+      customMinoesData, addCustomMino: _addCustomMino, removeCustomMino: _removeCustomMino, _setCustomMinoesBatch,
       startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece: rotatePieceInternal, softDrop, hardDrop, holdPiece,
       setEmojiSet: _setEmojiSet,
       getCurrentGameStateForAI,

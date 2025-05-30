@@ -20,7 +20,7 @@
   "emojiSettings": "Emoji Settings",
   "controlSettings": "Controls",
   "themeSharing": "Theme Sharing",
-  "themeSharingDescription": "Share your custom emoji themes with others via a link or apply a theme from a shared string/link.",
+  "themeSharingDescription": "Share your custom emoji themes and minoes with others via a link or apply them from a shared string/link.",
   "funBox": "Fun Box",
   "funBoxSettings": "Fun Box Extras",
   "funBoxDescription": "Discover hidden surprises! These features are off by default.",
@@ -51,11 +51,11 @@
   "errorMinoEmojiRequired": "Mino emoji is required (1-2 chars).",
   "errorMinoShapeRequired": "Mino shape cannot be empty.",
   "generateShareLink": "Generate Share Link",
-  "pasteShareStringOrLink": "Paste theme string or link here",
+  "pasteShareStringOrLink": "Paste theme & mino data string or link here",
   "pasteThemePlaceholder": "ey... or https://...",
-  "applyTheme": "Apply Theme",
-  "themeCopied": "Theme link copied to clipboard!",
-  "invalidThemeString": "Invalid theme string or link.",
+  "applyTheme": "Apply Data",
+  "themeCopied": "Shareable data link copied to clipboard!",
+  "invalidThemeString": "Invalid data string or link.",
   "language": "Language",
   "lightMode": "Light Mode",
   "darkMode": "Dark Mode",
@@ -110,5 +110,7 @@
   "toastLineClearTriple": "Triple Line Clear!",
   "toastLineClearTetris": "Tetriz!",
   "toastLevelUp": "Level Up! Reached Level {levelNumber}!",
-  "pauseStateTitle": "Paused"
+  "pauseStateTitle": "Paused",
+  "themeAndMinoesApplied": "Theme & Minoes Applied!",
+  "themeAndMinoesAppliedDesc": "Your new emojis and custom minoes are active."
 }

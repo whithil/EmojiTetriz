@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { encodeEmojiSet, decodeEmojiSet } from "@/lib/theme-utils";
+import { encodeShareableData, decodeShareableData } from "@/lib/theme-utils";
+import type { CustomMinoData } from "@/lib/tetris-constants";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Check, Link2 } from "lucide-react"; // Added Link2 for generating link
+import { Copy, Check, Link2 } from "lucide-react";
 
 export function ThemeSharing() {
-  const { emojiSet, setEmojiSet } = useGameContext();
+  const { emojiSet, setEmojiSet, customMinoesData, _setCustomMinoesBatch } = useGameContext();
   const { t } = useLocalization();
   const [shareableLink, setShareableLink] = useState("");
   const [inputString, setInputString] = useState("");
@@ -20,43 +21,44 @@ export function ThemeSharing() {
   const [copied, setCopied] = useState(false);
 
   const handleGenerateLink = () => {
-    const encoded = encodeEmojiSet(emojiSet);
+    const encoded = encodeShareableData({ emojiSet, customMinoesData });
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.set('theme', encoded);
       setShareableLink(url.toString());
     } else {
-      // Fallback for environments where window is not available (e.g. SSR, though this component is client-side)
-      setShareableLink(`Theme data: ${encoded} (Full link generation requires browser environment)`);
+      setShareableLink(`Shareable data: ${encoded} (Full link generation requires browser environment)`);
     }
   };
 
   const handleApplyTheme = () => {
-    let themeToApply = inputString;
-    // Check if the input string is a URL and try to extract the theme parameter
+    let dataToApply = inputString;
     try {
       const url = new URL(inputString);
-      const themeFromPastedUrl = url.searchParams.get('theme');
-      if (themeFromPastedUrl) {
-        themeToApply = themeFromPastedUrl;
+      const dataFromPastedUrl = url.searchParams.get('theme');
+      if (dataFromPastedUrl) {
+        dataToApply = dataFromPastedUrl;
       }
     } catch (e) {
-      // Not a valid URL, assume it's a direct theme string
+      // Not a valid URL, assume it's a direct data string
     }
 
-    const decoded = decodeEmojiSet(themeToApply);
-    if (decoded) {
-      setEmojiSet(decoded);
+    const decodedData = decodeShareableData(dataToApply);
+    if (decodedData) {
+      setEmojiSet(decodedData.emojiSet);
+      if (decodedData.customMinoesData) {
+        _setCustomMinoesBatch(decodedData.customMinoesData as CustomMinoData[]);
+      }
       toast({
-        title: t("applyTheme"),
-        description: "New emoji theme applied successfully!",
+        title: t("themeAndMinoesApplied"), // Updated toast message key
+        description: t("themeAndMinoesAppliedDesc"), // New description key
       });
-      setInputString(""); // Clear input after applying
-      setShareableLink(""); // Clear generated link as well
+      setInputString("");
+      setShareableLink("");
     } else {
       toast({
         title: "Error",
-        description: t("invalidThemeString"),
+        description: t("invalidThemeString"), // Keep this for general invalid strings
         variant: "destructive",
       });
     }
@@ -66,7 +68,7 @@ export function ThemeSharing() {
     if (!shareableLink) return;
     navigator.clipboard.writeText(shareableLink).then(() => {
       setCopied(true);
-      toast({ title: t("themeCopied") });
+      toast({ title: t("themeCopied") }); // Consider updating if it's more than just "theme"
       setTimeout(() => setCopied(false), 2000);
     });
   };
@@ -87,14 +89,14 @@ export function ThemeSharing() {
               readOnly
               value={shareableLink}
               className="min-h-[80px] pr-12"
-              aria-label="Shareable theme link"
+              aria-label="Shareable data link"
             />
             <Button
               variant="ghost"
               size="icon"
               onClick={handleCopy}
               className="absolute right-2 top-1/2 -translate-y-1/2"
-              aria-label="Copy theme link"
+              aria-label="Copy shareable data link"
             >
               {copied ? <Check className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
             </Button>

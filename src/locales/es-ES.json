@@ -20,7 +20,7 @@
   "emojiSettings": "Ajustes de Emoji",
   "controlSettings": "Controles",
   "themeSharing": "Compartir Tema",
-  "themeSharingDescription": "Comparte tus temas de emoji personalizados con otros a través de un enlace o aplica un tema desde un código/enlace compartido.",
+  "themeSharingDescription": "Comparte tus temas de emoji y minoes personalizados con otros a través de un enlace o aplícalos desde un código/enlace compartido.",
   "funBox": "Caja Divertida",
   "funBoxSettings": "Extras de la Caja Divertida",
   "funBoxDescription": "¡Descubre sorpresas ocultas! Estas características están desactivadas por defecto.",
@@ -51,11 +51,11 @@
   "errorMinoEmojiRequired": "El emoji del mino es obligatorio (1-2 caracteres).",
   "errorMinoShapeRequired": "La forma del mino no puede estar vacía.",
   "generateShareLink": "Generar Enlace para Compartir",
-  "pasteShareStringOrLink": "Pega el código o enlace del tema aquí",
+  "pasteShareStringOrLink": "Pega el código o enlace de datos de tema y minoes aquí",
   "pasteThemePlaceholder": "ey... o https://...",
-  "applyTheme": "Aplicar Tema",
-  "themeCopied": "¡Enlace del tema copiado al portapapeles!",
-  "invalidThemeString": "Código o enlace de tema inválido.",
+  "applyTheme": "Aplicar Datos",
+  "themeCopied": "¡Enlace de datos compartibles copiado al portapapeles!",
+  "invalidThemeString": "Código o enlace de datos inválido.",
   "language": "Idioma",
   "lightMode": "Modo Claro",
   "darkMode": "Modo Oscuro",
@@ -110,5 +110,7 @@
   "toastLineClearTriple": "¡Línea Triple!",
   "toastLineClearTetris": "¡Tetriz!",
   "toastLevelUp": "¡Subiste de Nivel! ¡Alcanzaste el Nivel {levelNumber}!",
-  "pauseStateTitle": "Pausado"
+  "pauseStateTitle": "Pausado",
+  "themeAndMinoesApplied": "¡Tema y Minoes Aplicados!",
+  "themeAndMinoesAppliedDesc": "Tus nuevos emojis y minoes personalizados están activos."
 }
