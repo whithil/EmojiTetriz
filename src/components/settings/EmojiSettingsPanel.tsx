@@ -47,7 +47,7 @@ export function EmojiSettingsPanel() {
   return (
     <div className="space-y-6">
       <h3 className="text-xl font-semibold text-foreground">{t("emojiSettings")}</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4"> {/* Changed from grid-cols-1 sm:grid-cols-2 */}
         {TETROMINO_TYPES.map(piece => (
           <div key={piece} className="space-y-1">
             <Label htmlFor={`emoji-${piece}`} className="text-muted-foreground">
