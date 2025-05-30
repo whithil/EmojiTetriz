@@ -25,7 +25,6 @@ import {
   DEFAULT_KEYBOARD_MAPPINGS,
   DEFAULT_GAMEPAD_MAPPINGS,
   GAME_ACTIONS,
-  // INITIAL_CUSTOM_MINOES_DATA, // Will be handled by default logic
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -115,12 +114,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [keyboardMappings, setKeyboardMappingsInternal] = useState<KeyboardMapping>(DEFAULT_KEYBOARD_MAPPINGS);
   const [gamepadMappings, setGamepadMappingsInternal] = useState<GamepadMapping>(DEFAULT_GAMEPAD_MAPPINGS);
 
-  const [confettiOnLineClearEnabled, setConfettiOnLineClearEnabledInternalState] = useState<boolean>(false);
+  const [confettiOnLineClearEnabled, setConfettiOnLineClearEnabledInternalState] = useState<boolean>(true);
   const [showLineClearConfetti, setShowLineClearConfetti] = useState<boolean>(false);
-  const [confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabledInternalState] = useState<boolean>(false);
+  const [confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabledInternalState] = useState<boolean>(true);
   const [showLevelUpConfetti, setShowLevelUpConfetti] = useState<boolean>(false);
 
-  const [customMinoesEnabled, setCustomMinoesEnabledInternalState] = useState<boolean>(false);
+  const [customMinoesEnabled, setCustomMinoesEnabledInternalState] = useState<boolean>(true);
   const [customMinoesData, setCustomMinoesDataInternal] = useState<CustomMinoData[]>([]);
 
   const { t } = useLocalization();
@@ -152,13 +151,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     });
     setEmojiSetState(parsedEmojiSet);
 
-    setConfettiOnLineClearEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, false));
-    setConfettiOnLevelUpEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, false));
-    setCustomMinoesEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, false));
+    setConfettiOnLineClearEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, true));
+    setConfettiOnLevelUpEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, true));
+    setCustomMinoesEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, true));
     
     let loadedCustomMinoes = loadFromLocalStorage<CustomMinoData[]>(
       LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY,
-      [] // Start with empty, then add defaults if needed
+      []
     );
 
     if (loadedCustomMinoes.length === 0) {
@@ -318,7 +317,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setCurrentPiece(positionedPiece);
       }
-    } else { // Should only happen at very start or if something went wrong
+    } else { 
       const { piece: firstPiece, newBag: firstBag } = internalGetRandomPiece();
       setPieceBag(firstBag);
       const positionedFirstPiece: CurrentPiece = {
@@ -328,7 +327,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       };
       if (checkCollision(positionedFirstPiece, board, {})) {
          setGameState("gameOver");
-         setCurrentPiece(null); // Ensure current piece is null on game over
+         setCurrentPiece(null); 
       } else {
         setCurrentPiece(positionedFirstPiece);
       }
@@ -358,7 +357,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         ...firstPieceVal,
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((firstPieceVal.shape[0]?.length || 1) / 2),
         y: 0,
-        rotation: 0, // Ensure rotation is reset
+        rotation: 0, 
     };
     setCurrentPiece(positionedFirstPiece);
     setNextPiece(secondPieceVal);
@@ -371,7 +370,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const clearedIndices = getClearedRowIndices(boardWithPiece);
 
     if (clearedIndices.length > 0) {
-      setBoard(boardWithPiece); // Show piece locked before animation for a frame
+      setBoard(boardWithPiece); 
       setAnimatingRows(clearedIndices);
 
       if (confettiOnLineClearEnabled) {
@@ -452,7 +451,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (customMinoDefinition) {
         shapeForHold = customMinoDefinition.shape; 
         emojiForHold = customMinoDefinition.emoji;
-      } else { // Fallback if custom mino definition somehow missing
+      } else { 
         shapeForHold = currentPiece.shape; 
         emojiForHold = currentPiece.emoji;
         console.warn(`Custom mino definition not found for ID ${currentPiece.id} during hold. Using current shape.`);
@@ -471,11 +470,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     if (!heldPiece) {
       setHeldPiece(pieceToStoreInHold);
-      spawnNewPiece(); // Spawn next piece from bag
+      spawnNewPiece(); 
     } else {
-      const pieceFromHold = heldPiece; // Get the piece currently in hold
-      setHeldPiece(pieceToStoreInHold); // Store current piece (reset to its base form) in hold
-      spawnNewPiece(pieceFromHold); // Spawn the piece that was in hold
+      const pieceFromHold = heldPiece; 
+      setHeldPiece(pieceToStoreInHold); 
+      spawnNewPiece(pieceFromHold); 
     }
     setCanHold(false);
   }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows, board, emojiSet, customMinoesData, TETROMINOES]);
@@ -497,28 +496,22 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [currentPiece, board, gameState]);
 
   const moveLeft = useCallback(() => {
-    // Guard against action when not appropriate
     if (gameState !== "playing" || animatingRows.length > 0) return;
-  
     setCurrentPiece(prevPiece => {
-      if (!prevPiece) return null;
-      if (checkCollision(prevPiece, board, { xOffset: -1 })) {
-        return prevPiece; // Collision detected, return current state
+      if (!prevPiece || checkCollision(prevPiece, board, { xOffset: -1 })) {
+        return prevPiece;
       }
-      return { ...prevPiece, x: prevPiece.x - 1 }; // No collision, update position
+      return { ...prevPiece, x: prevPiece.x - 1 };
     });
   }, [gameState, board, animatingRows]);
   
   const moveRight = useCallback(() => {
-    // Guard against action when not appropriate
     if (gameState !== "playing" || animatingRows.length > 0) return;
-  
     setCurrentPiece(prevPiece => {
-      if (!prevPiece) return null;
-      if (checkCollision(prevPiece, board, { xOffset: 1 })) {
-        return prevPiece; // Collision detected, return current state
+      if (!prevPiece || checkCollision(prevPiece, board, { xOffset: 1 })) {
+        return prevPiece;
       }
-      return { ...prevPiece, x: prevPiece.x + 1 }; // No collision, update position
+      return { ...prevPiece, x: prevPiece.x + 1 };
     });
   }, [gameState, board, animatingRows]);
   
@@ -533,8 +526,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const softDrop = () => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
     setIsSoftDropping(true);
-    processMoveDown(); // This will use the latest currentPiece due to its own logic
-    setTimeout(() => setIsSoftDropping(false), 50); // Reset soft dropping flag
+    processMoveDown(); 
+    setTimeout(() => setIsSoftDropping(false), 50); 
   };
 
   const hardDrop = () => {
@@ -543,8 +536,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     while (!checkCollision(finalLandedPiece, board, { yOffset: 1 })) {
       finalLandedPiece.y += 1;
     }
-    // Directly lock the piece at its final position.
-    // setCurrentPiece is not strictly needed here before lock if lockPieceAndSpawnNew takes the piece.
     lockPieceAndSpawnNew(finalLandedPiece);
   };
 
