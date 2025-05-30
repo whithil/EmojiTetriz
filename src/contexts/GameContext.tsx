@@ -14,14 +14,14 @@ import {
 } from "@/lib/tetris-logic";
 import { 
   BOARD_HEIGHT,
-  BOARD_WIDTH, // Added for positioning new pieces
+  BOARD_WIDTH, 
   INITIAL_LEVEL, 
   INITIAL_SCORE, 
   INITIAL_LINES_CLEARED, 
   DEFAULT_EMOJI_SET,
   TETROMINO_TYPES
 } from "@/lib/tetris-constants";
-import { useLocalization } from "./LocalizationContext"; // For game over text potentially
+import { useLocalization } from "./LocalizationContext";
 
 interface GameContextType {
   board: Board;
@@ -101,8 +101,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     return getRandomPieceLogic(emojiSet, pieceBag);
   }, [emojiSet, pieceBag]);
 
-  const spawnNewPiece = useCallback((pieceToSpawn?: CurrentPiece) => {
-    const pieceForCurrent = pieceToSpawn || nextPiece;
+  const spawnNewPiece = useCallback((pieceToSpawnInsteadOfNext?: CurrentPiece) => {
+    const pieceForCurrent = pieceToSpawnInsteadOfNext || nextPiece;
     const { piece: newNextPieceVal, newBag } = internalGetRandomPiece();
     
     setPieceBag(newBag);
@@ -123,14 +123,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setCurrentPiece(positionedPiece);
       }
-    } else { // Should only happen if nextPiece was null, e.g. at very start or error
+    } else { 
       const { piece: firstPiece, newBag: firstBag } = internalGetRandomPiece();
       setPieceBag(firstBag);
-      if (checkCollision(firstPiece, board, {})) {
+      const positionedFirstPiece: CurrentPiece = {
+        ...firstPiece,
+         x: Math.floor(BOARD_WIDTH / 2) - Math.floor(firstPiece.shape[0].length / 2),
+        y: 0,
+      };
+      if (checkCollision(positionedFirstPiece, board, {})) {
          setGameState("gameOver");
          setCurrentPiece(null);
       } else {
-        setCurrentPiece(firstPiece);
+        setCurrentPiece(positionedFirstPiece);
       }
     }
   }, [nextPiece, board, internalGetRandomPiece]);
@@ -147,16 +152,45 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setHeldPiece(null);
     setCanHold(true);
 
-    let initialBag: TetrominoType[] = [...TETROMINO_TYPES].sort(() => Math.random() - 0.5);
-    const { piece: firstPieceVal, newBag: bagAfterFirst } = getRandomPieceLogic(emojiSet, initialBag);
-    const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst);
+    // Initialize piece bag and first two pieces
+    const { piece: firstPieceVal, newBag: bagAfterFirst } = internalGetRandomPiece(); // Use internal which handles bag
+    const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst); // Use direct for next to ensure bag is used
     
-    setCurrentPiece(firstPieceVal);
+    const positionedFirstPiece: CurrentPiece = {
+        ...firstPieceVal,
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(firstPieceVal.shape[0].length / 2),
+        y: 0,
+    };
+    setCurrentPiece(positionedFirstPiece);
     setNextPiece(secondPieceVal);
     setPieceBag(bagAfterSecond);
 
-  }, [emojiSet]);
+  }, [emojiSet, internalGetRandomPiece]); // internalGetRandomPiece has emojiSet and pieceBag as deps
 
+  const lockPieceAndSpawnNew = useCallback((pieceToLock: CurrentPiece) => {
+    let newBoard = mergePieceToBoard(pieceToLock, board);
+    const { board: boardAfterClear, linesCleared: numLinesCleared } = clearLinesLogic(newBoard);
+    setBoard(boardAfterClear);
+
+    if (numLinesCleared > 0) {
+      const newLinesClearedTotal = linesCleared + numLinesCleared;
+      setLinesCleared(newLinesClearedTotal);
+      let lineScore = 0;
+      if (numLinesCleared === 1) lineScore = 40;
+      else if (numLinesCleared === 2) lineScore = 100;
+      else if (numLinesCleared === 3) lineScore = 300;
+      else if (numLinesCleared >= 4) lineScore = 1200; // Tetris bonus
+      setScore(prev => prev + lineScore * level);
+      
+      const newLevel = Math.floor(newLinesClearedTotal / 10) + 1;
+      if (newLevel > level) {
+        setLevel(newLevel);
+        setGameSpeed(calculateGameSpeed(newLevel));
+      }
+    }
+    spawnNewPiece();
+    setCanHold(true); 
+  }, [board, linesCleared, level, score, spawnNewPiece]);
 
   const processMoveDown = useCallback(() => {
     if (!currentPiece || gameState !== "playing") return;
@@ -164,52 +198,29 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (!checkCollision(currentPiece, board, { yOffset: 1 })) {
       setCurrentPiece(prev => prev ? { ...prev, y: prev.y + 1 } : null);
     } else {
-      let newBoard = mergePieceToBoard(currentPiece, board);
-      const { board: boardAfterClear, linesCleared: numLinesCleared } = clearLinesLogic(newBoard);
-      setBoard(boardAfterClear);
-
-      if (numLinesCleared > 0) {
-        const newLinesClearedTotal = linesCleared + numLinesCleared;
-        setLinesCleared(newLinesClearedTotal);
-        let lineScore = 0;
-        if (numLinesCleared === 1) lineScore = 40;
-        else if (numLinesCleared === 2) lineScore = 100;
-        else if (numLinesCleared === 3) lineScore = 300;
-        else if (numLinesCleared >= 4) lineScore = 1200;
-        setScore(prev => prev + lineScore * level);
-        
-        const newLevel = Math.floor(newLinesClearedTotal / 10) + 1;
-        if (newLevel > level) {
-          setLevel(newLevel);
-          setGameSpeed(calculateGameSpeed(newLevel));
-        }
-      }
-      spawnNewPiece();
-      setCanHold(true); 
+      lockPieceAndSpawnNew(currentPiece);
     }
-  }, [currentPiece, board, gameState, spawnNewPiece, linesCleared, level, score]);
+  }, [currentPiece, board, gameState, lockPieceAndSpawnNew]);
 
   const holdPiece = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || !canHold) return;
 
-    // Create a "clean" version of currentPiece for storing (reset position for preview)
     const pieceToStoreInHold: CurrentPiece = { 
         ...currentPiece, 
-        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(currentPiece.shape[0].length / 2), // Center for preview
-        y: 0 // Top for preview
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(currentPiece.shape[0].length / 2),
+        y: 0 
     };
 
     if (!heldPiece) {
       setHeldPiece(pieceToStoreInHold);
-      spawnNewPiece(); // Current becomes next, new next is drawn
+      spawnNewPiece(); 
     } else {
       const pieceFromHold = heldPiece;
       setHeldPiece(pieceToStoreInHold);
-      // Spawn the piece that was in hold as the new current piece
       spawnNewPiece(pieceFromHold); 
     }
     setCanHold(false);
-  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, board]);
+  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece]);
 
 
   useEffect(() => {
@@ -252,15 +263,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const hardDrop = () => {
     if (!currentPiece || gameState !== "playing") return;
-    let tempPiece = { ...currentPiece };
-    while (!checkCollision(tempPiece, board, { yOffset: 1 })) {
-      tempPiece.y += 1;
+    let finalLandedPiece = { ...currentPiece };
+    while (!checkCollision(finalLandedPiece, board, { yOffset: 1 })) {
+      finalLandedPiece.y += 1;
     }
-    // setCurrentPiece(tempPiece); // This was causing a slight visual jump
-    // Instead, directly trigger processMoveDown after positioning for locking
-    setCurrentPiece(prev => prev ? {...tempPiece} : null); // Ensure currentPiece state is updated
-    processMoveDown(); // This will lock the piece and spawn the next one
-
+    // Directly lock the piece at its final determined position
+    lockPieceAndSpawnNew(finalLandedPiece);
   };
 
   const pauseGame = () => {
@@ -293,5 +301,7 @@ export const useGameContext = () => {
   }
   return context;
 };
+
+    
 
     
