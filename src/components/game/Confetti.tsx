@@ -2,10 +2,10 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils'; // Not used in the current version
 
-const NUM_CONFETTI = 50; // Number of confetti pieces
-const CONFETTI_DURATION = 1500; // ms, should match GameContext
+const NUM_CONFETTI = 50;
+// Durations are now controlled by CSS animation and GameContext timeouts.
 
 interface ConfettiPiece {
   id: number;
@@ -21,39 +21,53 @@ const colors = [
   '#00CED1'  // DarkTurquoise
 ];
 
-export function Confetti() {
+export function Confetti({ animationType }: { animationType: 'lineClear' | 'levelUp' }) {
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
 
   useEffect(() => {
     const newPieces: ConfettiPiece[] = [];
     for (let i = 0; i < NUM_CONFETTI; i++) {
-      const angle = Math.random() * 360; // Angle for initial spread
-      const distance = Math.random() * 40 + 20; // Distance from center (vw/vh)
-      const initialX = 50 + distance * Math.cos(angle * Math.PI / 180);
-      const initialY = 50 + distance * Math.sin(angle * Math.PI / 180);
+      let initialX = '50vw'; 
+      let initialY = '50vh';
+      let endX = `${Math.random() * 150 - 75}vw`; 
+      let endY = `${Math.random() * 150 - 75}vh`;
+      let animationDelay = `${Math.random() * 0.1}s`; 
+
+      if (animationType === 'levelUp') {
+        initialX = `${Math.random() * 100}vw`; 
+        initialY = '-10vh'; 
+        animationDelay = `${Math.random() * 0.4}s`; 
+      }
       
       newPieces.push({
         id: i,
         color: colors[Math.floor(Math.random() * colors.length)],
         style: {
-          left: `${initialX}vw`,
-          top: `${initialY}vh`,
+          left: initialX,
+          top: initialY,
           transform: `rotate(${Math.random() * 360}deg) scale(${Math.random() * 0.5 + 0.5})`,
-          animationDelay: `${Math.random() * 0.2}s`, // Stagger start
-        },
+          animationDelay: animationDelay,
+          // CSS variables for lineClearConfettiAnimation's end state
+          '--confetti-end-x': endX, 
+          '--confetti-end-y': endY,
+          // CSS variables for lineClearConfettiAnimation's start state, relative to initial left/top
+          '--confetti-start-x': '0%', 
+          '--confetti-start-y': '0%',
+        } as React.CSSProperties,
       });
     }
     setPieces(newPieces);
+  }, [animationType]);
 
-    // No need to clear pieces here, as the parent component controls visibility.
-  }, []); // Trigger once on mount
+  if (pieces.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden"> {/* Increased z-index */}
       {pieces.map((piece) => (
         <div
           key={piece.id}
           className="confetti-piece"
+          data-animation-type={animationType}
           style={{
             ...piece.style,
             backgroundColor: piece.color,
@@ -63,5 +77,3 @@ export function Confetti() {
     </div>
   );
 }
-
-    
