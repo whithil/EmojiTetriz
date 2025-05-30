@@ -65,14 +65,32 @@ Follow these instructions to get a local copy up and running.
     ```bash
     npm run dev
     ```
-    The application should now be running on [http://localhost:9002](http://localhost:9002).
+    The application should now be running on [http://localhost:9002](http://localhost:9002) (or your configured port).
 
 5.  **(Optional) Run Genkit Developer UI:**
-    To inspect and test your Genkit flows, you can run the Genkit developer UI:
+    To inspect and test your Genkit flows, you can run the Genkit developer UI in a separate terminal:
     ```bash
     npm run genkit:dev
     ```
     This typically starts on [http://localhost:4000](http://localhost:4000).
+
+### Building for Production
+
+To create an optimized production build of your application, run:
+```bash
+npm run build
+```
+This command compiles your Next.js app and outputs the build artifacts to the `.next` directory.
+
+### Running the Production Build Locally
+
+After building, you can start the production server using:
+```bash
+npm run start
+```
+This will serve the optimized version of your app.
+
+**Note on Deployment:** GitHub Pages is best for static sites. For a full-featured Next.js application with server-side logic (like EmojiTetriz with its Genkit AI features), you'll need a hosting platform that supports Node.js, such as Vercel, Netlify, Firebase Hosting (with Cloud Functions/Run), AWS Amplify, etc.
 
 ## About Our Default Custom Minoes
 
@@ -86,3 +104,4 @@ Meet our default custom minoes, Jorge and Luka!
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+```
