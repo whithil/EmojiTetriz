@@ -93,7 +93,8 @@ export type GameState = "playing" | "paused" | "gameOver";
 
 export type Cell = {
   emoji: string;
-  type: TetrominoType;
+  type: TetrominoType | "custom"; // Added "custom" type
+  id?: string; // Optional ID for custom minoes
 } | null;
 
 export type Board = Cell[][];
@@ -103,8 +104,9 @@ export interface CurrentPiece {
   y: number;
   shape: number[][];
   emoji: string;
-  type: TetrominoType;
+  type: TetrominoType | "custom";
   rotation: number;
+  id?: string; // Optional ID for custom minoes
 }
 
 export type EmojiSet = Record<TetrominoType, string>;
@@ -168,10 +170,10 @@ export const DEFAULT_GAMEPAD_MAPPINGS: Readonly<GamepadMapping> = {
   moveLeft: GP_DPAD_LEFT,
   moveRight: GP_DPAD_RIGHT,
   softDrop: GP_DPAD_DOWN,
-  hardDrop: GP_DPAD_UP, // Changed from X/Square to D-Pad Up
-  rotateCW: GP_BUTTON_A_CROSS,    // Typically A or Cross
-  rotateCCW: GP_BUTTON_B_CIRCLE, // Typically B or Circle
-  holdPiece: GP_BUTTON_Y_TRIANGLE, // Typically Y or Triangle
+  hardDrop: GP_DPAD_UP,
+  rotateCW: GP_BUTTON_A_CROSS,
+  rotateCCW: GP_BUTTON_B_CIRCLE,
+  holdPiece: GP_BUTTON_Y_TRIANGLE,
   pauseResume: GP_BUTTON_START_OPTIONS,
 };
 
@@ -184,7 +186,6 @@ export const getKeyDisplayName = (key: string): string => {
 
 // Helper to get a display-friendly name for gamepad buttons
 export const getGamepadButtonDisplayName = (buttonIndex: number): string => {
-  // This can be expanded with more common names if desired
   switch (buttonIndex) {
     case GP_BUTTON_A_CROSS: return "A/Cross";
     case GP_BUTTON_B_CIRCLE: return "B/Circle";
@@ -203,3 +204,21 @@ export const getGamepadButtonDisplayName = (buttonIndex: number): string => {
     default: return `Button ${buttonIndex}`;
   }
 };
+
+// Custom Minoes
+export interface CustomMinoData {
+  id: string; // Unique identifier
+  name: string;
+  emoji: string;
+  shape: number[][]; // For now, only one shape (no rotations)
+}
+
+export const INITIAL_CUSTOM_MINOES_DATA: CustomMinoData[] = [];
+export const CUSTOM_MINO_GRID_SIZE = 4; // For drawing
+
+// Augment LocalizationContextType to ensure t_type is recognized for strong typing t function
+declare module "@/contexts/LocalizationContext" {
+  interface LocalizationContextType {
+    t_type: typeof import("@/locales/en-US.json");
+  }
+}

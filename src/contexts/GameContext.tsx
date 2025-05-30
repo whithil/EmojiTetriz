@@ -2,7 +2,7 @@
 "use client";
 import type { ReactNode } from "react";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { Board, CurrentPiece, EmojiSet, GameState, TetrominoType, KeyboardMapping, GamepadMapping, GameAction } from "@/lib/tetris-constants";
+import type { Board, CurrentPiece, EmojiSet, GameState, TetrominoType, KeyboardMapping, GamepadMapping, GameAction, CustomMinoData } from "@/lib/tetris-constants";
 import { 
   createEmptyBoard, 
   getRandomPiece as getRandomPieceLogic, 
@@ -24,6 +24,7 @@ import {
   DEFAULT_KEYBOARD_MAPPINGS,
   DEFAULT_GAMEPAD_MAPPINGS,
   GAME_ACTIONS,
+  INITIAL_CUSTOM_MINOES_DATA,
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +39,7 @@ const LOCAL_STORAGE_EMOJI_SET_KEY = "emojiSet";
 const LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY = "confettiLineClearEnabled";
 const LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY = "confettiLevelUpEnabled";
 const LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY = "customMinoesEnabled";
-// const LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY = "customMinoesData"; // For later
+const LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY = "customMinoesData";
 
 
 interface GameContextType {
@@ -68,7 +69,10 @@ interface GameContextType {
   
   customMinoesEnabled: boolean;
   setCustomMinoesEnabled: (enabled: boolean) => void;
-  // customMinoesData: any[]; // For later
+  customMinoesData: CustomMinoData[];
+  addCustomMino: (minoData: Omit<CustomMinoData, 'id'>) => void;
+  removeCustomMino: (id: string) => void;
+
   startGame: () => void;
   pauseGame: () => void;
   resumeGame: () => void;
@@ -79,7 +83,6 @@ interface GameContextType {
   hardDrop: () => void;
   holdPiece: () => void;
   setEmojiSet: (newEmojiSet: EmojiSet) => void;
-  // addCustomMino: (mino: any) => void; // For later
   getCurrentGameStateForAI: () => { score: number; level: number; linesCleared: number; gameState: GameState };
   updateKeyboardMapping: (action: GameAction, key: string) => void;
   updateGamepadMapping: (action: GameAction, buttonIndex: number) => void;
@@ -98,7 +101,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [ghostPiece, setGhostPiece] = useState<CurrentPiece | null>(null);
   const [heldPiece, setHeldPiece] = useState<CurrentPiece | null>(null);
   const [canHold, setCanHold] = useState<boolean>(true);
-  const [pieceBag, setPieceBag] = useState<TetrominoType[]>([]);
+  const [pieceBag, setPieceBag] = useState<TetrominoType[]>([]); // Does not include custom minoes yet
   const [score, setScore] = useState(INITIAL_SCORE);
   const [level, setLevel] = useState(INITIAL_LEVEL);
   const [linesCleared, setLinesCleared] = useState(INITIAL_LINES_CLEARED);
@@ -117,7 +120,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [showLevelUpConfetti, setShowLevelUpConfetti] = useState<boolean>(false);
 
   const [customMinoesEnabledInternal, setCustomMinoesEnabledInternalState] = useState<boolean>(false);
-  // const [customMinoesData, setCustomMinoesDataInternal] = useState<any[]>([]); // For later
+  const [customMinoesDataInternal, setCustomMinoesDataInternal] = useState<CustomMinoData[]>(INITIAL_CUSTOM_MINOES_DATA);
 
   const { t } = useLocalization();
   const { toast } = useToast();
@@ -125,7 +128,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   // Load settings from localStorage on mount
   useEffect(() => {
     const loadFromLocalStorage = <T,>(key: string, defaultValue: T, parser?: (val: string) => T): T => {
-      if (typeof window === 'undefined') return defaultValue; // Ensure localStorage is available
+      if (typeof window === 'undefined') return defaultValue;
       const storedValue = localStorage.getItem(key);
       if (storedValue) {
         try {
@@ -152,7 +155,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setConfettiOnLineClearEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, false));
     setConfettiOnLevelUpEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, false));
     setCustomMinoesEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, false));
-    // setCustomMinoesDataInternal(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, [])); // For later
+    setCustomMinoesDataInternal(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, INITIAL_CUSTOM_MINOES_DATA));
   }, []);
 
   const updateKeyboardMapping = useCallback((action: GameAction, newKey: string) => {
@@ -209,30 +212,44 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, JSON.stringify(enabled));
   }, []);
 
-  // const addCustomMino = useCallback((minoData: any) => { // For later
-  //   setCustomMinoesDataInternal(prev => {
-  //     const newData = [...prev, minoData];
-  //     localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
-  //     return newData;
-  //   });
-  // }, []);
+  const addCustomMino = useCallback((minoData: Omit<CustomMinoData, 'id'>) => {
+    setCustomMinoesDataInternal(prev => {
+      const newMino = { ...minoData, id: Date.now().toString() }; // Simple unique ID
+      const newData = [...prev, newMino];
+      localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
+      toast({ title: t("customMinoAdded"), description: t("customMinoAddedDesc", { name: newMino.name }) });
+      return newData;
+    });
+  }, [t, toast]);
 
+  const removeCustomMino = useCallback((id: string) => {
+    setCustomMinoesDataInternal(prev => {
+      const minoToRemove = prev.find(m => m.id === id);
+      const newData = prev.filter(mino => mino.id !== id);
+      localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
+      if (minoToRemove) {
+        toast({ title: t("customMinoRemoved"), description: t("customMinoRemovedDesc", { name: minoToRemove.name }), variant: "destructive" });
+      }
+      return newData;
+    });
+  }, [t, toast]);
 
   const internalGetRandomPiece = useCallback(() => {
-    return getRandomPieceLogic(emojiSet, pieceBag);
-  }, [emojiSet, pieceBag]);
+    // TODO: Integrate customMinoesData here if customMinoesEnabledInternal is true
+    return getRandomPieceLogic(emojiSet, pieceBag, customMinoesDataInternal, customMinoesEnabledInternal);
+  }, [emojiSet, pieceBag, customMinoesDataInternal, customMinoesEnabledInternal]);
 
   const spawnNewPiece = useCallback((pieceToSpawnInsteadOfNext?: CurrentPiece) => {
     const pieceForCurrent = pieceToSpawnInsteadOfNext || nextPiece;
     const { piece: newNextPieceVal, newBag } = internalGetRandomPiece();
     
-    setPieceBag(newBag);
+    setPieceBag(newBag); // pieceBag from getRandomPieceLogic might now be mixed
     setNextPiece(newNextPieceVal);
     
     if (pieceForCurrent) {
       const positionedPiece: CurrentPiece = {
         ...pieceForCurrent,
-        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(pieceForCurrent.shape[0].length / 2),
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor((pieceForCurrent.shape[0]?.length || 1) / 2),
         y: 0, 
       };
 
@@ -249,7 +266,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setPieceBag(firstBag);
       const positionedFirstPiece: CurrentPiece = {
         ...firstPiece,
-         x: Math.floor(BOARD_WIDTH / 2) - Math.floor(firstPiece.shape[0].length / 2),
+         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((firstPiece.shape[0]?.length || 1) / 2),
         y: 0,
       };
       if (checkCollision(positionedFirstPiece, board, {})) {
@@ -277,18 +294,18 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setCanHold(true);
 
     const { piece: firstPieceVal, newBag: bagAfterFirst } = internalGetRandomPiece();
-    const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst);
+    const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst, customMinoesDataInternal, customMinoesEnabledInternal);
     
     const positionedFirstPiece: CurrentPiece = {
         ...firstPieceVal,
-        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(firstPieceVal.shape[0].length / 2),
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor((firstPieceVal.shape[0]?.length || 1) / 2),
         y: 0,
     };
     setCurrentPiece(positionedFirstPiece);
     setNextPiece(secondPieceVal);
     setPieceBag(bagAfterSecond);
 
-  }, [emojiSet, internalGetRandomPiece]);
+  }, [emojiSet, internalGetRandomPiece, customMinoesDataInternal, customMinoesEnabledInternal]);
 
   const lockPieceAndSpawnNew = useCallback((pieceToLock: CurrentPiece) => {
     const boardWithPiece = mergePieceToBoard(pieceToLock, board);
@@ -314,7 +331,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       else if (numLinesCleared === 3) { lineScore = 300; toastMessageKey = "toastLineClearTriple"; }
       else if (numLinesCleared >= 4) { lineScore = 1200; toastMessageKey = "toastLineClearTetris"; }
       
-      if (toastMessageKey) {
+      if (toastMessageKey && t) { // Ensure t is defined
         toast({ title: t(toastMessageKey) });
       }
       setScore(prev => prev + lineScore * level);
@@ -327,7 +344,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           setShowLevelUpConfetti(true);
           setTimeout(() => setShowLevelUpConfetti(false), LEVEL_UP_CONFETTI_DURATION);
         }
-        toast({ title: t("toastLevelUp", { levelNumber: newLevel.toString() }) });
+        if (t) { // Ensure t is defined
+          toast({ title: t("toastLevelUp", { levelNumber: newLevel.toString() }) });
+        }
       }
 
       setTimeout(() => {
@@ -359,8 +378,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     const pieceToStoreInHold: CurrentPiece = { 
         ...currentPiece, 
-        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(currentPiece.shape[0].length / 2),
-        y: 0 
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor((currentPiece.shape[0]?.length || 1) / 2),
+        y: 0,
+        rotation: 0 // Reset rotation for held piece
     };
 
     if (!heldPiece) {
@@ -402,6 +422,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const rotatePieceInternal = (direction: 'cw' | 'ccw') => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
+    // Custom pieces don't rotate for now
+    if (currentPiece.type === "custom") return;
     const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction);
     setCurrentPiece(rotated);
   };
@@ -441,9 +463,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       keyboardMappings, gamepadMappings, 
       confettiOnLineClearEnabled: confettiOnLineClearEnabledInternal, setConfettiOnLineClearEnabled, showLineClearConfetti,
       confettiOnLevelUpEnabled: confettiOnLevelUpEnabledInternal, setConfettiOnLevelUpEnabled, showLevelUpConfetti,
-      customMinoesEnabled: customMinoesEnabledInternal,
+      customMinoesEnabled: customMinoesEnabledInternal, setCustomMinoesEnabled,
+      customMinoesData: customMinoesDataInternal, addCustomMino, removeCustomMino,
       startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece: rotatePieceInternal, softDrop, hardDrop, holdPiece, 
-      setEmojiSet, setCustomMinoesEnabled,
+      setEmojiSet,
       getCurrentGameStateForAI,
       updateKeyboardMapping, updateGamepadMapping, resetControlMappings
     }}>
@@ -460,7 +483,6 @@ export const useGameContext = () => {
   return context;
 };
 
-// Helper type for t function keys to avoid `any` and allow for dynamic keys with params
 export type Translations = typeof import("@/locales/en-US.json");
 declare module "./LocalizationContext" {
   interface LocalizationContextType { 
