@@ -21,6 +21,7 @@
   "funBoxSettings": "Extras da Caixa Divertida",
   "funBoxDescription": "Descubra surpresas escondidas! Estas funcionalidades estão desativadas por padrão.",
   "confettiOnLineClear": "Confete ao Limpar Linha",
+  "confettiOnLevelUp": "Confete ao Subir de Nível",
   "enableCustomMinoes": "Ativar Minoes Personalizados",
   "manageCustomMinoes": "Desenhar/Gerenciar Minoes Personalizados",
   "manageCustomMinoesTitle": "Gerenciar Minoes Personalizados",
@@ -81,5 +82,3 @@
   "pressButtonPrompt": "Pressione qualquer botão do controle para a ação:",
   "cancel": "Cancelar"
 }
-
-    

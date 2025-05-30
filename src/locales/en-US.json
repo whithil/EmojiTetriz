@@ -21,6 +21,7 @@
   "funBoxSettings": "Fun Box Extras",
   "funBoxDescription": "Discover hidden surprises! These features are off by default.",
   "confettiOnLineClear": "Confetti on Line Clear",
+  "confettiOnLevelUp": "Confetti on Level Up",
   "enableCustomMinoes": "Enable Custom Minoes",
   "manageCustomMinoes": "Draw/Manage Custom Minoes",
   "manageCustomMinoesTitle": "Manage Custom Minoes",
@@ -81,5 +82,3 @@
   "pressButtonPrompt": "Press any gamepad button for action:",
   "cancel": "Cancel"
 }
-
-    
