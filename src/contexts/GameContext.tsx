@@ -158,7 +158,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     
     let loadedCustomMinoes = loadFromLocalStorage<CustomMinoData[]>(
       LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY,
-      INITIAL_CUSTOM_MINOES_DATA
+      INITIAL_CUSTOM_MINOES_DATA 
     );
 
     if (loadedCustomMinoes.length === 0) {
@@ -173,7 +173,18 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           [0,1,1,1]
         ]
       };
-      loadedCustomMinoes = [defaultJorgeMino];
+      const defaultLukaMino: CustomMinoData = {
+        id: "default-luka-mino",
+        name: "Luka",
+        emoji: "🔴",
+        shape: [
+          [0,0,0,0],
+          [0,1,0,0],
+          [0,1,1,0],
+          [0,0,0,0]
+        ]
+      };
+      loadedCustomMinoes = [defaultJorgeMino, defaultLukaMino];
       if (typeof window !== 'undefined') {
         localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(loadedCustomMinoes));
       }
@@ -439,10 +450,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     } else {
       const customMinoDefinition = customMinoesDataInternal.find(m => m.id === currentPiece.id);
       if (customMinoDefinition) {
-        shapeForHold = customMinoDefinition.shape; // Use original drawn shape for hold
+        shapeForHold = customMinoDefinition.shape; 
         emojiForHold = customMinoDefinition.emoji;
       } else {
-        // Fallback, should ideally not happen if customMinoesDataInternal is correctly populated
         shapeForHold = currentPiece.shape; 
         emojiForHold = currentPiece.emoji;
         console.warn(`Custom mino definition not found for ID ${currentPiece.id} during hold. Using current shape.`);
@@ -452,7 +462,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const pieceToStoreInHold: CurrentPiece = {
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor((shapeForHold[0]?.length || 1) / 2),
         y: 0,
-        rotation: 0, // Always store in default rotation
+        rotation: 0, 
         shape: shapeForHold,
         emoji: emojiForHold,
         type: typeForHold,
