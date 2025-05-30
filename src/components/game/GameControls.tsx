@@ -2,14 +2,14 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ArrowLeft, ArrowRight, ArrowDown, ArrowUp, Zap, Play, PauseIcon, RotateCwSquare } from "lucide-react";
+import { RotateCcw, ArrowLeft, ArrowRight, ArrowDown, ArrowUp, Zap, Play, PauseIcon, RotateCwSquare, RotateCw } from "lucide-react";
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 
 // Standard Gamepad Button Mappings (indices)
-const GP_BUTTON_A_CROSS = 0; // Rotate Piece (was Hard Drop)
-// const GP_BUTTON_B_CIRCLE = 1;
-const GP_BUTTON_X_SQUARE = 2; // Hard Drop (was Rotate Piece)
+const GP_BUTTON_A_CROSS = 0; // Rotate Piece CW
+const GP_BUTTON_B_CIRCLE = 1; // Rotate Piece CCW
+// const GP_BUTTON_X_SQUARE = 2; // Was Hard Drop, now unused for primary action
 const GP_BUTTON_Y_TRIANGLE = 3; // Hold Piece
 // const GP_BUTTON_L1_LB = 4;
 // const GP_BUTTON_R1_RB = 5;
@@ -19,7 +19,7 @@ const GP_BUTTON_Y_TRIANGLE = 3; // Hold Piece
 const GP_BUTTON_START_OPTIONS = 9; // Pause/Resume/Start
 // const GP_BUTTON_L3_STICK = 10;
 // const GP_BUTTON_R3_STICK = 11;
-const GP_DPAD_UP = 12;
+const GP_DPAD_UP = 12; // Hard Drop
 const GP_DPAD_DOWN = 13; // Soft Drop
 const GP_DPAD_LEFT = 14; // Move Left
 const GP_DPAD_RIGHT = 15; // Move Right
@@ -38,7 +38,6 @@ export function GameControls() {
 
   const prevGamepadButtons = useRef<boolean[]>([]);
   const activeGamepadIndex = useRef<number | null>(null);
-  // Refs for managing continuous input from D-pad/sticks to avoid overly rapid calls
   const lastMoveTime = useRef(0);
   const moveRepeatDelay = 120; // ms, how fast piece moves when holding direction
   const initialMoveDelay = 200; // ms, delay before repeat starts
@@ -54,7 +53,8 @@ export function GameControls() {
         case "arrowleft": moveLeft(); break;
         case "arrowright": moveRight(); break;
         case "arrowdown": softDrop(); break;
-        case "arrowup": rotatePiece(); break;
+        case "arrowup": rotatePiece('cw'); break;
+        case "z": rotatePiece('ccw'); break; 
         case " ": event.preventDefault(); hardDrop(); break;
         case "p":
           if (gameState === "playing") pauseGame();
@@ -86,7 +86,6 @@ export function GameControls() {
     window.addEventListener("gamepadconnected", handleGamepadConnected);
     window.addEventListener("gamepaddisconnected", handleGamepadDisconnected);
 
-    // Check for already connected gamepads
     const gamepads = navigator.getGamepads();
     for (const gp of gamepads) {
       if (gp) {
@@ -118,7 +117,6 @@ export function GameControls() {
       const nowButtons = gamepad.buttons.map(b => b.pressed);
       const nowAxes = gamepad.axes;
 
-      // --- Main Action (Start/Pause/Resume) ---
       if (nowButtons[GP_BUTTON_START_OPTIONS] && !prevGamepadButtons.current[GP_BUTTON_START_OPTIONS]) {
         if (gameState === "gameOver") startGame();
         else if (gameState === "playing") pauseGame();
@@ -126,13 +124,9 @@ export function GameControls() {
       }
       
       if (gameState === "playing") {
-        // --- Movement (D-Pad & Analog Stick) with repeat delay ---
-        let movedHorizontally = false;
-        let movedVertically = false;
-
         const processMove = (action: () => void) => {
           const currentTime = performance.now();
-          if (moveActionHeldTime.current === 0) { // First press
+          if (moveActionHeldTime.current === 0) { 
             action();
             lastMoveTime.current = currentTime;
             moveActionHeldTime.current = currentTime; 
@@ -151,30 +145,31 @@ export function GameControls() {
 
         if (dpadLeft || stickLeft) {
           processMove(moveLeft);
-          movedHorizontally = true;
         } else if (dpadRight || stickRight) {
           processMove(moveRight);
-          movedHorizontally = true;
         }
 
         if (dpadDown || stickDown) {
           processMove(softDrop);
-          movedVertically = true;
         }
         
-        // Reset held time if no directional input
         if (!dpadLeft && !stickLeft && !dpadRight && !stickRight && !dpadDown && !stickDown) {
              moveActionHeldTime.current = 0;
         }
 
-
-        // --- Single Press Actions ---
-        if (nowButtons[GP_BUTTON_A_CROSS] && !prevGamepadButtons.current[GP_BUTTON_A_CROSS]) { // Now Rotate Piece
-          rotatePiece();
+        // Single Press Actions
+        if (nowButtons[GP_DPAD_UP] && !prevGamepadButtons.current[GP_DPAD_UP]) { // D-Pad Up for Hard Drop
+            hardDrop();
         }
-        if (nowButtons[GP_BUTTON_X_SQUARE] && !prevGamepadButtons.current[GP_BUTTON_X_SQUARE]) { // Now Hard Drop
-          hardDrop();
+        if (nowButtons[GP_BUTTON_A_CROSS] && !prevGamepadButtons.current[GP_BUTTON_A_CROSS]) { 
+          rotatePiece('cw');
         }
+        if (nowButtons[GP_BUTTON_B_CIRCLE] && !prevGamepadButtons.current[GP_BUTTON_B_CIRCLE]) { 
+          rotatePiece('ccw');
+        }
+        // if (nowButtons[GP_BUTTON_X_SQUARE] && !prevGamepadButtons.current[GP_BUTTON_X_SQUARE]) { 
+          // GP_BUTTON_X_SQUARE is now unassigned for a primary action
+        // }
         if (nowButtons[GP_BUTTON_Y_TRIANGLE] && !prevGamepadButtons.current[GP_BUTTON_Y_TRIANGLE]) {
           if (canHold) holdPiece();
         }
@@ -215,15 +210,22 @@ export function GameControls() {
       </Button>
       {gameState !== "gameOver" && (
          <div className="grid grid-cols-3 gap-2">
+            {/* Row 1 */}
+           <Button variant="outline" onClick={() => rotatePiece('cw')} disabled={gameState !== 'playing'} aria-label={t("rotateCW")} className="py-4"><RotateCw /></Button>
+           <Button variant="outline" onClick={() => rotatePiece('ccw')} disabled={gameState !== 'playing'} aria-label={t("rotateCCW")} className="py-4"><RotateCcw /></Button>
            <Button variant="outline" onClick={holdPiece} disabled={!canHold || gameState !== 'playing'} aria-label={t("holdButton")} className="py-4 col-span-1">
              <RotateCwSquare className="mr-1 h-5 w-5"/> {t("holdButton")}
            </Button>
-           <Button variant="outline" onClick={rotatePiece} disabled={gameState !== 'playing'} aria-label="Rotate" className="py-4 col-span-1"><RotateCcw /></Button>
-           <Button variant="outline" onClick={hardDrop} disabled={gameState !== 'playing'} aria-label="Hard Drop" className="py-4 col-span-1"><Zap/></Button>
            
-           <Button variant="outline" onClick={moveLeft} disabled={gameState !== 'playing'} aria-label="Move Left" className="py-4"><ArrowLeft /></Button>
-           <Button variant="outline" onClick={softDrop} disabled={gameState !== 'playing'} aria-label="Move Down" className="py-4"><ArrowDown /></Button>
-           <Button variant="outline" onClick={moveRight} disabled={gameState !== 'playing'} aria-label="Move Right" className="py-4"><ArrowRight /></Button>
+            {/* Row 2 */}
+           <Button variant="outline" onClick={moveLeft} disabled={gameState !== 'playing'} aria-label={t("moveLeft")} className="py-4"><ArrowLeft /></Button>
+           <Button variant="outline" onClick={hardDrop} disabled={gameState !== 'playing'} aria-label={t("hardDrop")} className="py-4"><Zap/></Button>
+           <Button variant="outline" onClick={moveRight} disabled={gameState !== 'playing'} aria-label={t("moveRight")} className="py-4"><ArrowRight /></Button>
+
+            {/* Row 3 - Soft drop centered */}
+            <div className="col-start-2 flex justify-center">
+                <Button variant="outline" onClick={softDrop} disabled={gameState !== 'playing'} aria-label={t("moveDown")} className="py-4 w-full"><ArrowDown /></Button>
+            </div>
          </div>
       )}
     </div>

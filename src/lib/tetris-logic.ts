@@ -47,12 +47,19 @@ export const checkCollision = (piece: CurrentPiece, board: Board, { xOffset = 0,
   return false;
 };
 
-export const rotatePiece = (piece: CurrentPiece, board: Board, emojiSet: EmojiSet): CurrentPiece => {
+export const rotatePieceLogic = (piece: CurrentPiece, board: Board, emojiSet: EmojiSet, direction: 'cw' | 'ccw'): CurrentPiece => {
   const originalRotation = piece.rotation;
   const originalX = piece.x;
   const originalY = piece.y;
+  const numRotations = TETROMINOES[piece.type].shapes.length;
 
-  let newRotation = (piece.rotation + 1) % TETROMINOES[piece.type].shapes.length;
+  let newRotation;
+  if (direction === 'cw') {
+    newRotation = (piece.rotation + 1) % numRotations;
+  } else { // ccw
+    newRotation = (piece.rotation - 1 + numRotations) % numRotations;
+  }
+  
   let newShape = TETROMINOES[piece.type].shapes[newRotation];
   
   const newPiece: CurrentPiece = {
@@ -133,3 +140,4 @@ export const getGhostPiece = (currentPiece: CurrentPiece, board: Board): Current
   }
   return ghostPiece;
 };
+

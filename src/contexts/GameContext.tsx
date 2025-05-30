@@ -7,7 +7,7 @@ import {
   createEmptyBoard, 
   getRandomPiece as getRandomPieceLogic, 
   checkCollision, 
-  rotatePiece as rotateLogic, 
+  rotatePieceLogic, 
   mergePieceToBoard,
   getClearedRowIndices,
   performLineClear,
@@ -45,7 +45,7 @@ interface GameContextType {
   resumeGame: () => void;
   moveLeft: () => void;
   moveRight: () => void;
-  rotatePiece: () => void;
+  rotatePiece: (direction: 'cw' | 'ccw') => void;
   softDrop: () => void;
   hardDrop: () => void;
   holdPiece: () => void;
@@ -266,9 +266,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setCurrentPiece(prev => prev ? { ...prev, x: prev.x + 1 } : null);
   };
 
-  const rotatePiece = () => {
+  const rotatePiece = (direction: 'cw' | 'ccw') => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
-    const rotated = rotateLogic(currentPiece, board, emojiSet);
+    const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction);
     setCurrentPiece(rotated);
   };
   
@@ -318,3 +318,4 @@ export const useGameContext = () => {
   }
   return context;
 };
+

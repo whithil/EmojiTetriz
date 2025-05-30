@@ -36,7 +36,11 @@
   "soundtrackSuggestion": "Soundtrack Suggestion",
   "getSoundtrackSuggestion": "Get Music Idea",
   "suggestionLoading": "Getting suggestion...",
-  "suggestionError": "Could not get a suggestion at this time."
+  "suggestionError": "Could not get a suggestion at this time.",
+  "rotateCW": "Rotate Clockwise",
+  "rotateCCW": "Rotate Counter-Clockwise",
+  "moveLeft": "Move Left",
+  "moveRight": "Move Right",
+  "moveDown": "Move Down (Soft Drop)",
+  "hardDrop": "Hard Drop"
 }
-
-    

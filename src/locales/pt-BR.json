@@ -36,7 +36,11 @@
   "soundtrackSuggestion": "Sugestão de Trilha Sonora",
   "getSoundtrackSuggestion": "Obter Ideia de Música",
   "suggestionLoading": "Obtendo sugestão...",
-  "suggestionError": "Não foi possível obter uma sugestão no momento."
+  "suggestionError": "Não foi possível obter uma sugestão no momento.",
+  "rotateCW": "Girar Horário",
+  "rotateCCW": "Girar Anti-horário",
+  "moveLeft": "Mover Esquerda",
+  "moveRight": "Mover Direita",
+  "moveDown": "Mover Baixo (Soft Drop)",
+  "hardDrop": "Hard Drop"
 }
-
-    
