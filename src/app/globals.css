@@ -84,6 +84,8 @@ body {
     --input: 240 3.7% 15.9%;
     --ring: 236 52% 57%; /* Primary color for ring */
 
+    --switch-unchecked-background-dark: 240 5% 35%; /* Lighter gray for switch 'off' in dark mode */
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -141,8 +143,8 @@ body {
   animation: lineClearCellAnimation 0.3s ease-out forwards;
 }
 
-/* Confetti Animation */
-@keyframes confetti-fall {
+/* Level Up Confetti Animation */
+@keyframes levelUpConfettiAnimation {
   0% {
     transform: translateY(-10vh) rotate(0deg) scale(1);
     opacity: 1;
@@ -153,9 +155,26 @@ body {
   }
 }
 
-.confetti-piece {
-  @apply absolute w-2 h-4 rounded-sm; /* Small rectangular confetti */
-  animation: confetti-fall 1.5s ease-out forwards; /* Matches CONFETTI_DURATION */
+/* Line Clear Confetti Animation */
+@keyframes lineClearConfettiAnimation {
+  0% {
+    transform: translate(var(--confetti-start-x, 0%), var(--confetti-start-y, 0%)) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--confetti-end-x, 0%), var(--confetti-end-y, 0%)) scale(0.3) rotate(720deg);
+    opacity: 0;
+  }
 }
 
+
+.confetti-piece[data-animation-type="levelUp"] {
+  @apply absolute w-2 h-4 rounded-sm; /* Small rectangular confetti */
+  animation: levelUpConfettiAnimation 1.5s ease-out forwards; /* Matches CONFETTI_DURATION */
+}
+
+.confetti-piece[data-animation-type="lineClear"] {
+  @apply absolute w-3 h-3 rounded-full; /* Smaller, rounder confetti for burst */
+  animation: lineClearConfettiAnimation 0.8s ease-out forwards;
+}
     
