@@ -2,7 +2,7 @@
 "use client";
 import type { ReactNode } from "react";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { Board, CurrentPiece, EmojiSet, GameState, TetrominoType } from "@/lib/tetris-constants";
+import type { Board, CurrentPiece, EmojiSet, GameState, TetrominoType, KeyboardMapping, GamepadMapping, GameAction } from "@/lib/tetris-constants";
 import { 
   createEmptyBoard, 
   getRandomPiece as getRandomPieceLogic, 
@@ -21,10 +21,16 @@ import {
   INITIAL_LINES_CLEARED, 
   DEFAULT_EMOJI_SET,
   TETROMINO_TYPES,
+  DEFAULT_KEYBOARD_MAPPINGS,
+  DEFAULT_GAMEPAD_MAPPINGS,
+  GAME_ACTIONS,
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
 
 const LINE_CLEAR_ANIMATION_DURATION = 300; // ms
+const LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY = "tetrisKeyboardMappings";
+const LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY = "tetrisGamepadMappings";
+
 
 interface GameContextType {
   board: Board;
@@ -39,7 +45,9 @@ interface GameContextType {
   gameState: GameState;
   emojiSet: EmojiSet;
   isSoftDropping: boolean;
-  animatingRows: number[]; // Rows currently undergoing clear animation
+  animatingRows: number[];
+  keyboardMappings: KeyboardMapping;
+  gamepadMappings: GamepadMapping;
   startGame: () => void;
   pauseGame: () => void;
   resumeGame: () => void;
@@ -51,6 +59,9 @@ interface GameContextType {
   holdPiece: () => void;
   setEmojiSet: (newEmojiSet: EmojiSet) => void;
   getCurrentGameStateForAI: () => { score: number; level: number; linesCleared: number; gameState: GameState };
+  updateKeyboardMapping: (action: GameAction, key: string) => void;
+  updateGamepadMapping: (action: GameAction, buttonIndex: number) => void;
+  resetControlMappings: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -74,8 +85,70 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [gameSpeed, setGameSpeed] = useState(calculateGameSpeed(INITIAL_LEVEL));
   const [isSoftDropping, setIsSoftDropping] = useState(false);
   const [animatingRows, setAnimatingRows] = useState<number[]>([]);
+
+  const [keyboardMappings, setKeyboardMappingsInternal] = useState<KeyboardMapping>(DEFAULT_KEYBOARD_MAPPINGS);
+  const [gamepadMappings, setGamepadMappingsInternal] = useState<GamepadMapping>(DEFAULT_GAMEPAD_MAPPINGS);
   
   const { t } = useLocalization();
+
+  // Load mappings from localStorage on mount
+  useEffect(() => {
+    const storedKeyboardMappings = localStorage.getItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY);
+    if (storedKeyboardMappings) {
+      try {
+        setKeyboardMappingsInternal(JSON.parse(storedKeyboardMappings));
+      } catch (e) {
+        console.error("Failed to parse keyboard mappings from localStorage", e);
+        setKeyboardMappingsInternal(DEFAULT_KEYBOARD_MAPPINGS);
+      }
+    }
+
+    const storedGamepadMappings = localStorage.getItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY);
+    if (storedGamepadMappings) {
+       try {
+        setGamepadMappingsInternal(JSON.parse(storedGamepadMappings));
+      } catch (e) {
+        console.error("Failed to parse gamepad mappings from localStorage", e);
+        setGamepadMappingsInternal(DEFAULT_GAMEPAD_MAPPINGS);
+      }
+    }
+  }, []);
+
+  const updateKeyboardMapping = useCallback((action: GameAction, newKey: string) => {
+    setKeyboardMappingsInternal(prev => {
+      const newMappings = { ...prev, [action]: newKey.toLowerCase() };
+      // Ensure no other action is mapped to this new key
+      GAME_ACTIONS.forEach(act => {
+        if (act !== action && newMappings[act] === newKey.toLowerCase()) {
+          delete newMappings[act]; // Unassign from old action
+        }
+      });
+      localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(newMappings));
+      return newMappings;
+    });
+  }, []);
+
+  const updateGamepadMapping = useCallback((action: GameAction, newButtonIndex: number) => {
+    setGamepadMappingsInternal(prev => {
+      const newMappings = { ...prev, [action]: newButtonIndex };
+      // Ensure no other action is mapped to this new button
+      GAME_ACTIONS.forEach(act => {
+        if (act !== action && newMappings[act] === newButtonIndex) {
+           delete newMappings[act]; // Unassign from old action
+        }
+      });
+      localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(newMappings));
+      return newMappings;
+    });
+  }, []);
+
+  const resetControlMappings = useCallback(() => {
+    setKeyboardMappingsInternal(DEFAULT_KEYBOARD_MAPPINGS);
+    setGamepadMappingsInternal(DEFAULT_GAMEPAD_MAPPINGS);
+    localStorage.setItem(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, JSON.stringify(DEFAULT_KEYBOARD_MAPPINGS));
+    localStorage.setItem(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, JSON.stringify(DEFAULT_GAMEPAD_MAPPINGS));
+  }, []);
+
 
   const setEmojiSet = useCallback((newEmojiSet: EmojiSet) => {
     setEmojiSetState(newEmojiSet);
@@ -177,7 +250,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const clearedIndices = getClearedRowIndices(boardWithPiece);
 
     if (clearedIndices.length > 0) {
-      setBoard(boardWithPiece); // Show board with piece merged before animation
+      setBoard(boardWithPiece); 
       setAnimatingRows(clearedIndices);
       
       const numLinesCleared = clearedIndices.length;
@@ -208,7 +281,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       spawnNewPiece();
       setCanHold(true);
     }
-  }, [board, linesCleared, level, score, spawnNewPiece, internalGetRandomPiece]); // Added internalGetRandomPiece for spawnNewPiece dependency chain
+  }, [board, linesCleared, level, score, spawnNewPiece, internalGetRandomPiece]); 
 
   const processMoveDown = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
@@ -266,7 +339,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setCurrentPiece(prev => prev ? { ...prev, x: prev.x + 1 } : null);
   };
 
-  const rotatePiece = (direction: 'cw' | 'ccw') => {
+  const rotatePieceInternal = (direction: 'cw' | 'ccw') => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
     const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction);
     setCurrentPiece(rotated);
@@ -304,7 +377,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   return (
     <GameContext.Provider value={{
       board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold, score, level, linesCleared, gameState, emojiSet, isSoftDropping, animatingRows,
-      startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece, softDrop, hardDrop, holdPiece, setEmojiSet, getCurrentGameStateForAI
+      keyboardMappings, gamepadMappings,
+      startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece: rotatePieceInternal, softDrop, hardDrop, holdPiece, setEmojiSet, getCurrentGameStateForAI,
+      updateKeyboardMapping, updateGamepadMapping, resetControlMappings
     }}>
       {children}
     </GameContext.Provider>
@@ -318,4 +393,3 @@ export const useGameContext = () => {
   }
   return context;
 };
-

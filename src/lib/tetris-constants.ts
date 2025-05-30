@@ -5,7 +5,7 @@ export const BOARD_HEIGHT = 20;
 export type TetrominoType = "I" | "J" | "L" | "O" | "S" | "T" | "Z";
 
 export interface PieceShape {
-  shape: number[][][]; // Array of rotation matrices
+  shapes: number[][][]; // Array of rotation matrices
   emoji: string;
   colorClass: string; // For potential styling beyond emoji
 }
@@ -18,7 +18,7 @@ export const TETROMINOES: Record<TetrominoType, PieceShape> = {
       [[0,0,0,0], [0,0,0,0], [1,1,1,1], [0,0,0,0]],
       [[0,1,0,0], [0,1,0,0], [0,1,0,0], [0,1,0,0]],
     ],
-    emoji: "🧊", // Cyan block
+    emoji: "🧊",
     colorClass: "bg-cyan-500",
   },
   J: {
@@ -28,7 +28,7 @@ export const TETROMINOES: Record<TetrominoType, PieceShape> = {
       [[0,0,0], [1,1,1], [0,0,1]],
       [[0,1,0], [0,1,0], [1,1,0]],
     ],
-    emoji: "🟦", // Blue block
+    emoji: "🟦",
     colorClass: "bg-blue-500",
   },
   L: {
@@ -38,7 +38,7 @@ export const TETROMINOES: Record<TetrominoType, PieceShape> = {
       [[0,0,0], [1,1,1], [1,0,0]],
       [[1,1,0], [0,1,0], [0,1,0]],
     ],
-    emoji: "🟧", // Orange block
+    emoji: "🟧",
     colorClass: "bg-orange-500",
   },
   O: {
@@ -48,7 +48,7 @@ export const TETROMINOES: Record<TetrominoType, PieceShape> = {
       [[1,1], [1,1]],
       [[1,1], [1,1]],
     ],
-    emoji: "🟨", // Yellow block
+    emoji: "🟨",
     colorClass: "bg-yellow-500",
   },
   S: {
@@ -58,7 +58,7 @@ export const TETROMINOES: Record<TetrominoType, PieceShape> = {
       [[0,0,0], [0,1,1], [1,1,0]],
       [[1,0,0], [1,1,0], [0,1,0]],
     ],
-    emoji: "🟩", // Green block
+    emoji: "🟩",
     colorClass: "bg-green-500",
   },
   T: {
@@ -68,7 +68,7 @@ export const TETROMINOES: Record<TetrominoType, PieceShape> = {
       [[0,0,0], [1,1,1], [0,1,0]],
       [[0,1,0], [1,1,0], [0,1,0]],
     ],
-    emoji: "🟪", // Purple block
+    emoji: "🟪",
     colorClass: "bg-purple-500",
   },
   Z: {
@@ -78,7 +78,7 @@ export const TETROMINOES: Record<TetrominoType, PieceShape> = {
       [[0,0,0], [1,1,0], [0,1,1]],
       [[0,1,0], [1,1,0], [1,0,0]],
     ],
-    emoji: "🟥", // Red block
+    emoji: "🟥",
     colorClass: "bg-red-500",
   },
 };
@@ -113,3 +113,93 @@ export const DEFAULT_EMOJI_SET: EmojiSet = TETROMINO_TYPES.reduce((acc, type) =>
   acc[type] = TETROMINOES[type].emoji;
   return acc;
 }, {} as EmojiSet);
+
+
+// Control Mapping Constants
+export const GAME_ACTIONS = [
+  "moveLeft", "moveRight", "softDrop", "hardDrop",
+  "rotateCW", "rotateCCW", "holdPiece", "pauseResume"
+] as const;
+
+export type GameAction = typeof GAME_ACTIONS[number];
+
+export type KeyboardMapping = Partial<Record<GameAction, string>>;
+export type GamepadMapping = Partial<Record<GameAction, number>>; // Stores button index
+
+// Standard Gamepad Button Mappings (indices)
+export const GP_BUTTON_A_CROSS = 0;
+export const GP_BUTTON_B_CIRCLE = 1;
+export const GP_BUTTON_X_SQUARE = 2;
+export const GP_BUTTON_Y_TRIANGLE = 3;
+export const GP_BUTTON_L1_LB = 4;
+export const GP_BUTTON_R1_RB = 5;
+export const GP_BUTTON_L2_LT = 6;
+export const GP_BUTTON_R2_RT = 7;
+export const GP_BUTTON_SELECT_BACK = 8;
+export const GP_BUTTON_START_OPTIONS = 9;
+export const GP_BUTTON_L3_STICK = 10;
+export const GP_BUTTON_R3_STICK = 11;
+export const GP_DPAD_UP = 12;
+export const GP_DPAD_DOWN = 13;
+export const GP_DPAD_LEFT = 14;
+export const GP_DPAD_RIGHT = 15;
+
+// Standard Gamepad Axes
+export const GP_AXIS_LEFT_HORIZONTAL = 0;
+export const GP_AXIS_LEFT_VERTICAL = 1;
+export const GP_AXIS_RIGHT_HORIZONTAL = 2;
+export const GP_AXIS_RIGHT_VERTICAL = 3;
+
+export const AXIS_THRESHOLD = 0.5; // Threshold for analog stick input
+
+
+export const DEFAULT_KEYBOARD_MAPPINGS: Readonly<KeyboardMapping> = {
+  moveLeft: "arrowleft",
+  moveRight: "arrowright",
+  softDrop: "arrowdown",
+  hardDrop: " ", // Space bar
+  rotateCW: "arrowup",
+  rotateCCW: "z",
+  holdPiece: "c",
+  pauseResume: "p",
+};
+
+export const DEFAULT_GAMEPAD_MAPPINGS: Readonly<GamepadMapping> = {
+  moveLeft: GP_DPAD_LEFT,
+  moveRight: GP_DPAD_RIGHT,
+  softDrop: GP_DPAD_DOWN,
+  hardDrop: GP_DPAD_UP, // Changed from X/Square to D-Pad Up
+  rotateCW: GP_BUTTON_A_CROSS,    // Typically A or Cross
+  rotateCCW: GP_BUTTON_B_CIRCLE, // Typically B or Circle
+  holdPiece: GP_BUTTON_Y_TRIANGLE, // Typically Y or Triangle
+  pauseResume: GP_BUTTON_START_OPTIONS,
+};
+
+// Helper to get a display-friendly name for keys
+export const getKeyDisplayName = (key: string): string => {
+  if (key === " ") return "Space";
+  if (key.startsWith("arrow")) return key.charAt(5).toUpperCase() + key.slice(6) + " Arrow";
+  return key.toUpperCase();
+};
+
+// Helper to get a display-friendly name for gamepad buttons
+export const getGamepadButtonDisplayName = (buttonIndex: number): string => {
+  // This can be expanded with more common names if desired
+  switch (buttonIndex) {
+    case GP_BUTTON_A_CROSS: return "A/Cross";
+    case GP_BUTTON_B_CIRCLE: return "B/Circle";
+    case GP_BUTTON_X_SQUARE: return "X/Square";
+    case GP_BUTTON_Y_TRIANGLE: return "Y/Triangle";
+    case GP_BUTTON_L1_LB: return "L1/LB";
+    case GP_BUTTON_R1_RB: return "R1/RB";
+    case GP_BUTTON_L2_LT: return "L2/LT";
+    case GP_BUTTON_R2_RT: return "R2/RT";
+    case GP_BUTTON_SELECT_BACK: return "Select/Back";
+    case GP_BUTTON_START_OPTIONS: return "Start/Options";
+    case GP_DPAD_UP: return "D-Pad Up";
+    case GP_DPAD_DOWN: return "D-Pad Down";
+    case GP_DPAD_LEFT: return "D-Pad Left";
+    case GP_DPAD_RIGHT: return "D-Pad Right";
+    default: return `Button ${buttonIndex}`;
+  }
+};
