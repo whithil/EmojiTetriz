@@ -4,6 +4,9 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   output: 'export',
+  // Add basePath and assetPrefix for GitHub Pages deployment
+  basePath: '/EmojiTetriz', // Replace with your repository name
+  assetPrefix: '/EmojiTetriz/', // Replace with your repository name and add a trailing slash
   typescript: {
     ignoreBuildErrors: true,
   },
