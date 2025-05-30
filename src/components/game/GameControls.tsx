@@ -7,9 +7,9 @@ import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 
 // Standard Gamepad Button Mappings (indices)
-const GP_BUTTON_A_CROSS = 0; // Hard Drop
+const GP_BUTTON_A_CROSS = 0; // Rotate Piece (was Hard Drop)
 // const GP_BUTTON_B_CIRCLE = 1;
-const GP_BUTTON_X_SQUARE = 2; // Rotate Piece
+const GP_BUTTON_X_SQUARE = 2; // Hard Drop (was Rotate Piece)
 const GP_BUTTON_Y_TRIANGLE = 3; // Hold Piece
 // const GP_BUTTON_L1_LB = 4;
 // const GP_BUTTON_R1_RB = 5;
@@ -169,11 +169,11 @@ export function GameControls() {
 
 
         // --- Single Press Actions ---
-        if (nowButtons[GP_BUTTON_A_CROSS] && !prevGamepadButtons.current[GP_BUTTON_A_CROSS]) {
-          hardDrop();
-        }
-        if (nowButtons[GP_BUTTON_X_SQUARE] && !prevGamepadButtons.current[GP_BUTTON_X_SQUARE]) {
+        if (nowButtons[GP_BUTTON_A_CROSS] && !prevGamepadButtons.current[GP_BUTTON_A_CROSS]) { // Now Rotate Piece
           rotatePiece();
+        }
+        if (nowButtons[GP_BUTTON_X_SQUARE] && !prevGamepadButtons.current[GP_BUTTON_X_SQUARE]) { // Now Hard Drop
+          hardDrop();
         }
         if (nowButtons[GP_BUTTON_Y_TRIANGLE] && !prevGamepadButtons.current[GP_BUTTON_Y_TRIANGLE]) {
           if (canHold) holdPiece();
