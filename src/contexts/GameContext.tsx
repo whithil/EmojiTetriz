@@ -26,6 +26,7 @@ import {
   GAME_ACTIONS,
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
+import { useToast } from "@/hooks/use-toast";
 
 const LINE_CLEAR_ANIMATION_DURATION = 300; // ms
 const LEVEL_UP_CONFETTI_DURATION = 1500; // ms, should match Confetti.tsx
@@ -110,15 +111,16 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [keyboardMappings, setKeyboardMappingsInternal] = useState<KeyboardMapping>(DEFAULT_KEYBOARD_MAPPINGS);
   const [gamepadMappings, setGamepadMappingsInternal] = useState<GamepadMapping>(DEFAULT_GAMEPAD_MAPPINGS);
   
-  const [confettiOnLineClearEnabled, setConfettiOnLineClearEnabledInternal] = useState<boolean>(false);
+  const [confettiOnLineClearEnabledInternal, setConfettiOnLineClearEnabledInternalState] = useState<boolean>(false);
   const [showLineClearConfetti, setShowLineClearConfetti] = useState<boolean>(false);
-  const [confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabledInternal] = useState<boolean>(false);
+  const [confettiOnLevelUpEnabledInternal, setConfettiOnLevelUpEnabledInternalState] = useState<boolean>(false);
   const [showLevelUpConfetti, setShowLevelUpConfetti] = useState<boolean>(false);
 
-  const [customMinoesEnabled, setCustomMinoesEnabledInternal] = useState<boolean>(false);
+  const [customMinoesEnabledInternal, setCustomMinoesEnabledInternalState] = useState<boolean>(false);
   // const [customMinoesData, setCustomMinoesDataInternal] = useState<any[]>([]); // For later
 
   const { t } = useLocalization();
+  const { toast } = useToast();
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -147,9 +149,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     });
     setEmojiSetState(parsedEmojiSet);
 
-    setConfettiOnLineClearEnabledInternal(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, false));
-    setConfettiOnLevelUpEnabledInternal(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, false));
-    setCustomMinoesEnabledInternal(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, false));
+    setConfettiOnLineClearEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, false));
+    setConfettiOnLevelUpEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, false));
+    setCustomMinoesEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, false));
     // setCustomMinoesDataInternal(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, [])); // For later
   }, []);
 
@@ -193,17 +195,17 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setConfettiOnLineClearEnabled = useCallback((enabled: boolean) => {
-    setConfettiOnLineClearEnabledInternal(enabled);
+    setConfettiOnLineClearEnabledInternalState(enabled);
     localStorage.setItem(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, JSON.stringify(enabled));
   }, []);
 
   const setConfettiOnLevelUpEnabled = useCallback((enabled: boolean) => {
-    setConfettiOnLevelUpEnabledInternal(enabled);
+    setConfettiOnLevelUpEnabledInternalState(enabled);
     localStorage.setItem(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, JSON.stringify(enabled));
   }, []);
 
   const setCustomMinoesEnabled = useCallback((enabled: boolean) => {
-    setCustomMinoesEnabledInternal(enabled);
+    setCustomMinoesEnabledInternalState(enabled);
     localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, JSON.stringify(enabled));
   }, []);
 
@@ -296,7 +298,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setBoard(boardWithPiece); 
       setAnimatingRows(clearedIndices);
       
-      if (confettiOnLineClearEnabled) {
+      if (confettiOnLineClearEnabledInternal) {
         setShowLineClearConfetti(true);
         setTimeout(() => setShowLineClearConfetti(false), LINE_CLEAR_CONFETTI_EFFECT_DURATION);
       }
@@ -305,20 +307,27 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const newLinesClearedTotal = linesCleared + numLinesCleared;
       setLinesCleared(newLinesClearedTotal);
       let lineScore = 0;
-      if (numLinesCleared === 1) lineScore = 40;
-      else if (numLinesCleared === 2) lineScore = 100;
-      else if (numLinesCleared === 3) lineScore = 300;
-      else if (numLinesCleared >= 4) lineScore = 1200;
+      let toastMessageKey: keyof Translations | null = null;
+
+      if (numLinesCleared === 1) { lineScore = 40; toastMessageKey = "toastLineClearSingle"; }
+      else if (numLinesCleared === 2) { lineScore = 100; toastMessageKey = "toastLineClearDouble"; }
+      else if (numLinesCleared === 3) { lineScore = 300; toastMessageKey = "toastLineClearTriple"; }
+      else if (numLinesCleared >= 4) { lineScore = 1200; toastMessageKey = "toastLineClearTetris"; }
+      
+      if (toastMessageKey) {
+        toast({ title: t(toastMessageKey) });
+      }
       setScore(prev => prev + lineScore * level);
       
       const newLevel = Math.floor(newLinesClearedTotal / 10) + 1;
       if (newLevel > level) {
         setLevel(newLevel);
         setGameSpeed(calculateGameSpeed(newLevel));
-        if (confettiOnLevelUpEnabled) {
+        if (confettiOnLevelUpEnabledInternal) {
           setShowLevelUpConfetti(true);
           setTimeout(() => setShowLevelUpConfetti(false), LEVEL_UP_CONFETTI_DURATION);
         }
+        toast({ title: t("toastLevelUp", { levelNumber: newLevel.toString() }) });
       }
 
       setTimeout(() => {
@@ -333,7 +342,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       spawnNewPiece();
       setCanHold(true);
     }
-  }, [board, linesCleared, level, score, spawnNewPiece, confettiOnLineClearEnabled, confettiOnLevelUpEnabled, internalGetRandomPiece]); 
+  }, [board, linesCleared, level, score, spawnNewPiece, confettiOnLineClearEnabledInternal, confettiOnLevelUpEnabledInternal, internalGetRandomPiece, t, toast]); 
 
   const processMoveDown = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0 || showLineClearConfetti || showLevelUpConfetti) return;
@@ -430,9 +439,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     <GameContext.Provider value={{
       board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold, score, level, linesCleared, gameState, emojiSet, isSoftDropping, animatingRows,
       keyboardMappings, gamepadMappings, 
-      confettiOnLineClearEnabled, setConfettiOnLineClearEnabled, showLineClearConfetti,
-      confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabled, showLevelUpConfetti,
-      customMinoesEnabled,
+      confettiOnLineClearEnabled: confettiOnLineClearEnabledInternal, setConfettiOnLineClearEnabled, showLineClearConfetti,
+      confettiOnLevelUpEnabled: confettiOnLevelUpEnabledInternal, setConfettiOnLevelUpEnabled, showLevelUpConfetti,
+      customMinoesEnabled: customMinoesEnabledInternal,
       startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece: rotatePieceInternal, softDrop, hardDrop, holdPiece, 
       setEmojiSet, setCustomMinoesEnabled,
       getCurrentGameStateForAI,
@@ -451,6 +460,12 @@ export const useGameContext = () => {
   return context;
 };
 
-    
-
+// Helper type for t function keys to avoid `any` and allow for dynamic keys with params
+export type Translations = typeof import("@/locales/en-US.json");
+declare module "./LocalizationContext" {
+  interface LocalizationContextType { 
+    t_type: Translations;
+    t: (key: keyof Translations, params?: Record<string, string | number>) => string;
+  }
+}
     

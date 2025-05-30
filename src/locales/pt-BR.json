@@ -80,5 +80,10 @@
   "pressKeyOrButtonTitle": "Aguardando Entrada",
   "pressKeyPrompt": "Pressione qualquer tecla para a ação:",
   "pressButtonPrompt": "Pressione qualquer botão do controle para a ação:",
-  "cancel": "Cancelar"
+  "cancel": "Cancelar",
+  "toastLineClearSingle": "Linha Simples!",
+  "toastLineClearDouble": "Linha Dupla!",
+  "toastLineClearTriple": "Linha Tripla!",
+  "toastLineClearTetris": "Tetris!",
+  "toastLevelUp": "Subiu de Nível! Alcançou o Nível {levelNumber}!"
 }

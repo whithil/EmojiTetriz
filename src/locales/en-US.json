@@ -80,5 +80,10 @@
   "pressKeyOrButtonTitle": "Waiting for Input",
   "pressKeyPrompt": "Press any key for action:",
   "pressButtonPrompt": "Press any gamepad button for action:",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "toastLineClearSingle": "Single Line Clear!",
+  "toastLineClearDouble": "Double Line Clear!",
+  "toastLineClearTriple": "Triple Line Clear!",
+  "toastLineClearTetris": "Tetris!",
+  "toastLevelUp": "Level Up! Reached Level {levelNumber}!"
 }
