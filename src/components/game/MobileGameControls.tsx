@@ -76,9 +76,9 @@ export function MobileGameControls() {
         const moveDeltaY = currentY - lastProcessedTouchYRef.current;
         if (moveDeltaY > 0) { // Only accumulate for downward drag
             accumulatedVerticalDragRef.current += moveDeltaY;
-            while (accumulatedVerticalDragRef.current >= VERTICAL_PIXELS_PER_SOFT_DROP) {
-                softDrop();
-                accumulatedVerticalDragRef.current -= VERTICAL_PIXELS_PER_SOFT_DROP;
+            if (accumulatedVerticalDragRef.current >= VERTICAL_PIXELS_PER_SOFT_DROP) {
+                softDrop(); // Call softDrop once when threshold is met
+                accumulatedVerticalDragRef.current = 0; // Reset accumulator for this direction
             }
         }
     }
@@ -104,14 +104,17 @@ export function MobileGameControls() {
     const absDeltaY = Math.abs(deltaY);
 
     if (gestureIntentRef.current === 'vertical') {
+        // Check for upward swipe (hard drop)
         if (deltaY < -TAP_MOVE_THRESHOLD * 2) { 
           hardDrop();
-        } else if (deltaY > TAP_MOVE_THRESHOLD * 2 && accumulatedVerticalDragRef.current < VERTICAL_PIXELS_PER_SOFT_DROP) {
+        } else if (deltaY > TAP_MOVE_THRESHOLD * 2 && accumulatedVerticalDragRef.current < VERTICAL_PIXELS_PER_SOFT_DROP && duration < TAP_DURATION_THRESHOLD * 1.5) {
           // If it was a clear vertical swipe down, but not enough accumulated for continuous,
-          // treat it as a single soft drop.
+          // and it was relatively quick, treat it as a single soft drop.
+          // This covers cases where the continuous drag didn't trigger.
           softDrop();
         }
     } else if (gestureIntentRef.current !== 'horizontal') { 
+      // If not a horizontal drag, check for tap
       if (duration < TAP_DURATION_THRESHOLD && absDeltaX < TAP_MOVE_THRESHOLD && absDeltaY < TAP_MOVE_THRESHOLD) {
         const boardRect = gameBoardTouchAreaRef.current?.getBoundingClientRect();
         if (boardRect) {
@@ -183,3 +186,5 @@ export function MobileGameControls() {
     </>
   );
 }
+
+    
