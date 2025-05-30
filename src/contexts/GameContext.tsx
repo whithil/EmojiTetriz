@@ -20,7 +20,7 @@ import {
   INITIAL_SCORE,
   INITIAL_LINES_CLEARED,
   DEFAULT_EMOJI_SET,
-  TETROMINOES, 
+  TETROMINOES,
   TETROMINO_TYPES,
   DEFAULT_KEYBOARD_MAPPINGS,
   DEFAULT_GAMEPAD_MAPPINGS,
@@ -155,7 +155,32 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setConfettiOnLineClearEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, false));
     setConfettiOnLevelUpEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, false));
     setCustomMinoesEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, false));
-    setCustomMinoesDataInternal(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, INITIAL_CUSTOM_MINOES_DATA));
+    
+    // Load custom minoes and add "Jorge" if empty
+    let loadedCustomMinoes = loadFromLocalStorage<CustomMinoData[]>(
+      LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY,
+      INITIAL_CUSTOM_MINOES_DATA // which is []
+    );
+
+    if (loadedCustomMinoes.length === 0) {
+      const defaultJorgeMino: CustomMinoData = {
+        id: "default-jorge-mino",
+        name: "Jorge",
+        emoji: "🈂️",
+        shape: [
+          [0,1,0,0],
+          [0,1,1,0],
+          [0,1,0,0],
+          [0,0,0,0]
+        ]
+      };
+      loadedCustomMinoes = [defaultJorgeMino];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(loadedCustomMinoes));
+      }
+    }
+    setCustomMinoesDataInternal(loadedCustomMinoes);
+
   }, []);
 
   const updateKeyboardMapping = useCallback((action: GameAction, newKey: string) => {
@@ -245,7 +270,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY, JSON.stringify(newData));
       }
-      setPieceBag(currentBag => currentBag.filter(bagItemId => bagItemId !== id));
+      // If the removed mino was the default Jorge and the list becomes empty,
+      // Jorge will be re-added on next load if this logic isn't here.
+      // However, the current load logic handles adding Jorge only if the list is empty *after loading from storage*.
+      // So, if the user deletes Jorge, and there are other minoes, Jorge won't be re-added.
+      // If the user deletes the *last* mino (which might be Jorge), then on next load, Jorge will be re-added. This is intended.
+      
+      setPieceBag(currentBag => currentBag.filter(bagItemId => bagItemId !== id)); // Remove from current piece bag too
       if (minoToRemove) {
         toast({ title: t("customMinoRemoved"), description: t("customMinoRemovedDesc", { name: minoToRemove.name }), variant: "destructive" });
       }
@@ -310,9 +341,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     setHeldPiece(null);
     setCanHold(true);
-    setPieceBag([]); 
-
-    const { piece: firstPieceVal, newBag: bagAfterFirst } = getRandomPieceLogic(emojiSet, [], customMinoesDataInternal, customMinoesEnabledInternal);
+    
+    // Initialize piece bag considering currently available custom minoes
+    const initialBagForGameStart: Array<TetrominoType | string> = [];
+    const { piece: firstPieceVal, newBag: bagAfterFirst } = getRandomPieceLogic(emojiSet, initialBagForGameStart, customMinoesDataInternal, customMinoesEnabledInternal);
     const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst, customMinoesDataInternal, customMinoesEnabledInternal);
 
     const positionedFirstPiece: CurrentPiece = {
@@ -380,7 +412,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       spawnNewPiece();
       setCanHold(true);
     }
-  }, [board, linesCleared, level, score, spawnNewPiece, confettiOnLineClearEnabledInternal, confettiOnLevelUpEnabledInternal, t, toast]);
+  }, [board, linesCleared, level, confettiOnLineClearEnabledInternal, confettiOnLevelUpEnabledInternal, t, toast, spawnNewPiece]);
 
   const processMoveDown = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0 || showLineClearConfetti || showLevelUpConfetti) return;
@@ -392,7 +424,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentPiece, board, gameState, lockPieceAndSpawnNew, animatingRows, showLineClearConfetti, showLevelUpConfetti]);
 
-  const holdPiece = useCallback(() => {
+ const holdPiece = useCallback(() => {
     if (!currentPiece || gameState !== "playing" || !canHold || animatingRows.length > 0) return;
 
     let shapeForHold: number[][];
@@ -404,12 +436,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       shapeForHold = TETROMINOES[currentPiece.type].shapes[0]; 
       emojiForHold = emojiSet[currentPiece.type] || TETROMINOES[currentPiece.type].emoji;
     } else {
+      // For custom minoes, find their original definition to ensure the original shape is held
       const customMinoDefinition = customMinoesDataInternal.find(m => m.id === currentPiece.id);
       if (customMinoDefinition) {
         shapeForHold = customMinoDefinition.shape;
         emojiForHold = customMinoDefinition.emoji;
       } else {
-        shapeForHold = currentPiece.shape; // Fallback
+        // Fallback if somehow definition not found (should not happen)
+        shapeForHold = currentPiece.shape; 
         emojiForHold = currentPiece.emoji;
         console.warn(`Custom mino definition not found for ID ${currentPiece.id} during hold. Using current shape.`);
       }
@@ -434,7 +468,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       spawnNewPiece(pieceFromHold); 
     }
     setCanHold(false);
-  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows, board, emojiSet, customMinoesDataInternal]); 
+  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows, board, emojiSet, customMinoesDataInternal, TETROMINOES]); 
 
 
   useEffect(() => {
@@ -464,7 +498,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const rotatePieceInternal = (direction: 'cw' | 'ccw') => {
     if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
-    const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction);
+    const rotated = rotatePieceLogic(currentPiece, board, emojiSet, direction, customMinoesDataInternal); // Pass customMinoesData for rotation
     setCurrentPiece(rotated);
   };
 
