@@ -1,6 +1,6 @@
 # EmojiTetriz
 
-EmojiTetriz is a fun and modern take on the classic Tetris game, built with Next.js and featuring customizable emoji-styled pieces, themes, and AI-powered soundtrack suggestions.
+EmojiTetriz is a fun and modern take on the classic Tetris game, built with Next.js and featuring customizable emoji-styled pieces and themes.
 
 This project was bootstrapped in Firebase Studio.
 
@@ -23,7 +23,6 @@ This project was bootstrapped in Firebase Studio.
 *   TypeScript
 *   ShadCN UI Components
 *   Tailwind CSS
-*   Genkit (for AI-powered features)
 *   Lucide Icons
 
 ## Getting Started
@@ -52,26 +51,11 @@ Follow these instructions to get a local copy up and running.
     yarn install
     ```
 
-3.  **Set up Environment Variables:**
-    Create a `.env` file in the root of your project (or `.env.local` for local overrides). If you are using Genkit with Google AI models that require an API key, you'll need to add it here:
-    ```env
-    # .env or .env.local
-    GOOGLE_API_KEY=YOUR_GOOGLE_GEMINI_API_KEY
-    ```
-    Other Genkit plugins or AI models might require different environment variables.
-
-4.  **Run the development server:**
+3.  **Run the development server:**
     ```bash
     npm run dev
     ```
     The application should now be running on [http://localhost:9002](http://localhost:9002) (or your configured port).
-
-5.  **(Optional) Run Genkit Developer UI:**
-    To inspect and test your Genkit flows (if any remain or are added later), you can run the Genkit developer UI in a separate terminal:
-    ```bash
-    npm run genkit:dev
-    ```
-    This typically starts on [http://localhost:4000](http://localhost:4000).
 
 ### Building for Production
 
@@ -89,7 +73,7 @@ npm run start
 ```
 This will serve the optimized version of your app.
 
-**Note on Deployment:** GitHub Pages is best for static sites. If you aim for a fully static export (which will remove any remaining server-side Next.js features), you can investigate `next export`. For a full-featured Next.js application with server-side logic (like if you re-add AI features), you'll need a hosting platform that supports Node.js, such as Vercel, Netlify, Firebase Hosting (with Cloud Functions/Run), AWS Amplify, etc.
+**Note on Deployment:** GitHub Pages is best for static sites. If you aim for a fully static export (which will remove any remaining server-side Next.js features), you can investigate `next export`. For a full-featured Next.js application with server-side logic, you'll need a hosting platform that supports Node.js, such as Vercel, Netlify, Firebase Hosting (with Cloud Functions/Run), AWS Amplify, etc.
 
 ## About Our Default Custom Minoes
 
