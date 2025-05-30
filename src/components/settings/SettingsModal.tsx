@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmojiSettingsPanel } from "./EmojiSettingsPanel";
-import { ControlSettingsPanel } from "./ControlSettingsPanel"; // Import new panel
+import { ControlSettingsPanel } from "./ControlSettingsPanel";
 import { ThemeSharing } from "./ThemeSharing";
+import { FunBoxSettingsPanel } from "./FunBoxSettingsPanel"; // New import
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button } from "../ui/button";
 import { X } from "lucide-react";
@@ -36,19 +37,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-2 py-4">
           <Tabs defaultValue="emoji-settings" className="w-full">
-            <TabsList className="grid w-full grid-cols-3"> {/* Adjusted for 3 tabs */}
+            <TabsList className="grid w-full grid-cols-4"> {/* Adjusted for 4 tabs */}
               <TabsTrigger value="emoji-settings">{t("emojiSettings")}</TabsTrigger>
-              <TabsTrigger value="control-settings">{t("controlSettings")}</TabsTrigger> {/* New tab */}
+              <TabsTrigger value="control-settings">{t("controlSettings")}</TabsTrigger>
               <TabsTrigger value="theme-sharing">{t("themeSharing")}</TabsTrigger>
+              <TabsTrigger value="fun-box">{t("funBox")}</TabsTrigger> {/* New tab */}
             </TabsList>
             <TabsContent value="emoji-settings" className="mt-4">
               <EmojiSettingsPanel />
             </TabsContent>
-            <TabsContent value="control-settings" className="mt-4"> {/* New tab content */}
+            <TabsContent value="control-settings" className="mt-4">
               <ControlSettingsPanel />
             </TabsContent>
             <TabsContent value="theme-sharing" className="mt-4">
               <ThemeSharing />
+            </TabsContent>
+            <TabsContent value="fun-box" className="mt-4"> {/* New tab content */}
+              <FunBoxSettingsPanel />
             </TabsContent>
           </Tabs>
         </div>
@@ -68,3 +73,5 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     </Dialog>
   );
 }
+
+    

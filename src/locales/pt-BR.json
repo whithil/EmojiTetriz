@@ -17,6 +17,15 @@
   "emojiSettings": "Configurações de Emoji",
   "controlSettings": "Controles",
   "themeSharing": "Compartilhar Tema",
+  "funBox": "Caixa Divertida",
+  "funBoxSettings": "Extras da Caixa Divertida",
+  "funBoxDescription": "Descubra surpresas escondidas! Estas funcionalidades estão desativadas por padrão.",
+  "confettiOnLineClear": "Confete ao Limpar Linha",
+  "enableCustomMinoes": "Ativar Minoes Personalizados",
+  "manageCustomMinoes": "Desenhar/Gerenciar Minoes Personalizados",
+  "manageCustomMinoesTitle": "Gerenciar Minoes Personalizados",
+  "customMinoesModalDescription": "Crie suas próprias peças de Tetris!",
+  "featureComingSoon": "Funcionalidade completa em breve!",
   "generateShareString": "Gerar Código de Compartilhamento",
   "pasteShareString": "Cole seu código de tema aqui",
   "applyTheme": "Aplicar Tema",
@@ -72,3 +81,5 @@
   "pressButtonPrompt": "Pressione qualquer botão do controle para a ação:",
   "cancel": "Cancelar"
 }
+
+    

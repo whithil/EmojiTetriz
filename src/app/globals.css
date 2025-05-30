@@ -139,5 +139,23 @@ body {
 
 .tetris-board-cell.filled.line-clearing {
   animation: lineClearCellAnimation 0.3s ease-out forwards;
-  /* 'forwards' keeps the final state of the animation (opacity 0) */
 }
+
+/* Confetti Animation */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  @apply absolute w-2 h-4 rounded-sm; /* Small rectangular confetti */
+  animation: confetti-fall 1.5s ease-out forwards; /* Matches CONFETTI_DURATION */
+}
+
+    

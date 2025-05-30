@@ -17,6 +17,15 @@
   "emojiSettings": "Emoji Settings",
   "controlSettings": "Controls",
   "themeSharing": "Theme Sharing",
+  "funBox": "Fun Box",
+  "funBoxSettings": "Fun Box Extras",
+  "funBoxDescription": "Discover hidden surprises! These features are off by default.",
+  "confettiOnLineClear": "Confetti on Line Clear",
+  "enableCustomMinoes": "Enable Custom Minoes",
+  "manageCustomMinoes": "Draw/Manage Custom Minoes",
+  "manageCustomMinoesTitle": "Manage Custom Minoes",
+  "customMinoesModalDescription": "Design your own Tetris pieces!",
+  "featureComingSoon": "Full feature coming soon!",
   "generateShareString": "Generate Share String",
   "pasteShareString": "Paste your theme string here",
   "applyTheme": "Apply Theme",
@@ -72,3 +81,5 @@
   "pressButtonPrompt": "Press any gamepad button for action:",
   "cancel": "Cancel"
 }
+
+    

@@ -5,12 +5,13 @@ import React, { useState, useEffect } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GameBoard } from "@/components/game/GameBoard";
 import { PiecePreview } from "@/components/game/PiecePreview";
-import { HeldPiecePreview } from "@/components/game/HeldPiecePreview"; // Import HeldPiecePreview
+import { HeldPiecePreview } from "@/components/game/HeldPiecePreview";
 import { GameInfoPanel } from "@/components/game/GameInfoPanel";
 import { GameControls } from "@/components/game/GameControls";
 import { GameOverOverlay } from "@/components/game/GameOverOverlay";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { SoundtrackSuggestionButton } from "@/components/game/SoundtrackSuggestionToast";
+import { Confetti } from "@/components/game/Confetti"; // New import
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button } from "@/components/ui/button"; 
@@ -19,7 +20,7 @@ import { Play } from "lucide-react";
 export default function HomePage() {
   const { 
     board, currentPiece, nextPiece, ghostPiece, heldPiece, animatingRows,
-    score, level, linesCleared, gameState, startGame 
+    score, level, linesCleared, gameState, startGame, showConfettiAnimation // Added showConfettiAnimation
   } = useGameContext();
   const { t } = useLocalization();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -57,7 +58,8 @@ export default function HomePage() {
               </div>
             )}
             <GameBoard board={board} currentPiece={currentPiece} ghostPiece={ghostPiece} animatingRows={animatingRows} />
-            {gameState === "gameOver" && currentPiece && <GameOverOverlay />} {/* Show GameOverOverlay only if game is over AND piece is present (meaning not initial screen) */}
+            {gameState === "gameOver" && currentPiece && <GameOverOverlay />}
+            {showConfettiAnimation && <Confetti />} {/* Conditionally render Confetti */}
           </div>
         </div>
       </main>
@@ -68,3 +70,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
