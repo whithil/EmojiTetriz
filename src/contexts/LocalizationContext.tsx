@@ -5,8 +5,11 @@ import type { ReactNode } from "react";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import enUS from "@/locales/en-US.json";
 import ptBR from "@/locales/pt-BR.json";
+import deDE from "@/locales/de-DE.json";
+import esES from "@/locales/es-ES.json";
+import frFR from "@/locales/fr-FR.json";
 
-type Locale = "en-US" | "pt-BR";
+type Locale = "en-US" | "pt-BR" | "de-DE" | "es-ES" | "fr-FR";
 type Translations = typeof enUS; // Assuming en-US has all keys
 
 interface LocalizationContextType {
@@ -18,6 +21,9 @@ interface LocalizationContextType {
 const translations: Record<Locale, Translations> = {
   "en-US": enUS,
   "pt-BR": ptBR,
+  "de-DE": deDE, // German (placeholder: English)
+  "es-ES": esES, // Spanish (placeholder: English)
+  "fr-FR": frFR, // French (placeholder: English)
 };
 
 const LocalizationContext = createContext<LocalizationContextType | undefined>(undefined);
@@ -34,7 +40,14 @@ export const LocalizationProvider = ({ children }: { children: ReactNode }) => {
       const browserLang = navigator.language;
       if (browserLang.startsWith("pt")) {
         setLocaleState("pt-BR");
-      } else {
+      } else if (browserLang.startsWith("de")) {
+        setLocaleState("de-DE");
+      } else if (browserLang.startsWith("es")) {
+        setLocaleState("es-ES");
+      } else if (browserLang.startsWith("fr")) {
+        setLocaleState("fr-FR");
+      }
+       else {
         setLocaleState("en-US");
       }
     }
@@ -46,7 +59,7 @@ export const LocalizationProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const t = useCallback((key: keyof Translations, params?: Record<string, string | number>): string => {
-    let translation = translations[locale][key] || translations["en-US"][key] || key;
+    let translation = translations[locale]?.[key] || translations["en-US"][key] || String(key);
     if (params) {
       Object.entries(params).forEach(([paramKey, paramValue]) => {
         translation = translation.replace(`{${paramKey}}`, String(paramValue));

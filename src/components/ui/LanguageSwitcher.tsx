@@ -29,6 +29,15 @@ export function LanguageSwitcher() {
         <DropdownMenuItem onClick={() => setLocale("pt-BR")} disabled={locale === "pt-BR"}>
           Português (BR)
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setLocale("es-ES")} disabled={locale === "es-ES"}>
+          Español
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setLocale("fr-FR")} disabled={locale === "fr-FR"}>
+          Français
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setLocale("de-DE")} disabled={locale === "de-DE"}>
+          Deutsch
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
