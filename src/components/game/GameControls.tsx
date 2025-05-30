@@ -6,7 +6,7 @@ import { RotateCcw, ArrowLeft, ArrowRight, ArrowDown, Zap, Play, PauseIcon, Rota
 import { useGameContext } from "@/contexts/GameContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { GameAction } from "@/lib/tetris-constants";
-import { GP_AXIS_LEFT_HORIZONTAL, GP_AXIS_LEFT_VERTICAL, AXIS_THRESHOLD } from "@/lib/tetris-constants"; // Assuming AXIS_THRESHOLD is defined here
+import { GP_AXIS_LEFT_HORIZONTAL, GP_AXIS_LEFT_VERTICAL, AXIS_THRESHOLD } from "@/lib/tetris-constants";
 
 export function GameControls() {
   const { 
@@ -62,7 +62,6 @@ export function GameControls() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (gameState === "gameOver" && event.key.toLowerCase() !== keyboardMappings.pauseResume) {
-        // Allow pauseResume (start) even on gameOver screen, but not other actions
         const action = getActionForKey(event.key.toLowerCase());
         if (action === "pauseResume") executeAction(action);
         return;
@@ -71,7 +70,7 @@ export function GameControls() {
       
       const action = getActionForKey(event.key.toLowerCase());
       if (action) {
-        if (action === 'hardDrop' || action === 'pauseResume') { // Prevent default for space
+        if (action === 'hardDrop' || action === 'pauseResume') { 
              event.preventDefault();
         }
         executeAction(action);
@@ -132,9 +131,8 @@ export function GameControls() {
       const nowButtons = gamepad.buttons.map(b => b.pressed);
       const nowAxes = gamepad.axes;
 
-      // Pause/Resume/Start Action (always available)
       const pauseResumeActionGamepad = getActionForGamepadButton(gamepadMappings.pauseResume!);
-      if (pauseResumeActionGamepad && nowButtons[gamepadMappings.pauseResume!] && !prevGamepadButtons.current[gamepadMappings.pauseResume!]) {
+      if (pauseResumeActionGamepad && gamepadMappings.pauseResume !== undefined && nowButtons[gamepadMappings.pauseResume] && !prevGamepadButtons.current[gamepadMappings.pauseResume]) {
           executeAction(pauseResumeActionGamepad);
       }
       
@@ -151,7 +149,6 @@ export function GameControls() {
           }
         };
         
-        // Continuous actions (D-Pad and Analog Stick for movement)
         const moveLeftAction = getActionForGamepadButton(gamepadMappings.moveLeft!);
         const moveRightAction = getActionForGamepadButton(gamepadMappings.moveRight!);
         const softDropAction = getActionForGamepadButton(gamepadMappings.softDrop!);
@@ -178,7 +175,6 @@ export function GameControls() {
              moveActionHeldTime.current = 0;
         }
 
-        // Single Press Button Actions
         nowButtons.forEach((isPressed, buttonIndex) => {
           if (isPressed && !prevGamepadButtons.current[buttonIndex]) {
             const action = getActionForGamepadButton(buttonIndex);
@@ -188,13 +184,11 @@ export function GameControls() {
           }
         });
       } else if (gameState === "gameOver") {
-        // Allow only pauseResume (start) on gameOver screen from gamepad
         const pauseResumeAction = getActionForGamepadButton(gamepadMappings.pauseResume!);
         if (pauseResumeAction && gamepadMappings.pauseResume !== undefined && nowButtons[gamepadMappings.pauseResume] && !prevGamepadButtons.current[gamepadMappings.pauseResume]) {
             executeAction(pauseResumeAction);
         }
       }
-
 
       prevGamepadButtons.current = nowButtons;
       animationFrameId = requestAnimationFrame(gameLoop);
@@ -210,9 +204,9 @@ export function GameControls() {
   };
 
   const getMainActionIcon = () => {
-    if (gameState === "gameOver") return <Play className="mr-2 h-5 w-5" />;
-    if (gameState === "playing") return <PauseIcon className="mr-2 h-5 w-5" />;
-    return <Play className="mr-2 h-5 w-5" />;
+    if (gameState === "gameOver") return <Play className="mr-2 h-6 w-6" />;
+    if (gameState === "playing") return <PauseIcon className="mr-2 h-6 w-6" />;
+    return <Play className="mr-2 h-6 w-6" />;
   };
 
   const getMainActionText = () => {
@@ -229,18 +223,18 @@ export function GameControls() {
       </Button>
       {gameState !== "gameOver" && (
          <div className="grid grid-cols-3 gap-2">
-           <Button variant="outline" onClick={() => executeAction("rotateCW")} disabled={gameState !== 'playing'} aria-label={t("rotateCW")} className="py-4"><RotateCw /></Button>
-           <Button variant="outline" onClick={() => executeAction("rotateCCW")} disabled={gameState !== 'playing'} aria-label={t("rotateCCW")} className="py-4"><RotateCcw /></Button>
-           <Button variant="outline" onClick={() => executeAction("holdPiece")} disabled={!canHold || gameState !== 'playing'} aria-label={t("holdButton")} className="py-4 col-span-1">
-             <RotateCwSquare className="mr-1 h-5 w-5"/> {t("holdButton")}
+           <Button variant="outline" onClick={() => executeAction("rotateCW")} disabled={gameState !== 'playing'} aria-label={t("rotateCW")} className="py-5"><RotateCw className="h-6 w-6"/></Button>
+           <Button variant="outline" onClick={() => executeAction("rotateCCW")} disabled={gameState !== 'playing'} aria-label={t("rotateCCW")} className="py-5"><RotateCcw className="h-6 w-6"/></Button>
+           <Button variant="outline" onClick={() => executeAction("holdPiece")} disabled={!canHold || gameState !== 'playing'} aria-label={t("holdButton")} className="py-5 col-span-1">
+             <RotateCwSquare className="mr-1 h-6 w-6"/> {t("holdButton")}
            </Button>
            
-           <Button variant="outline" onClick={() => executeAction("moveLeft")} disabled={gameState !== 'playing'} aria-label={t("moveLeft")} className="py-4"><ArrowLeft /></Button>
-           <Button variant="outline" onClick={() => executeAction("hardDrop")} disabled={gameState !== 'playing'} aria-label={t("hardDrop")} className="py-4"><Zap/></Button>
-           <Button variant="outline" onClick={() => executeAction("moveRight")} disabled={gameState !== 'playing'} aria-label={t("moveRight")} className="py-4"><ArrowRight /></Button>
+           <Button variant="outline" onClick={() => executeAction("moveLeft")} disabled={gameState !== 'playing'} aria-label={t("moveLeft")} className="py-5"><ArrowLeft className="h-6 w-6"/></Button>
+           <Button variant="outline" onClick={() => executeAction("hardDrop")} disabled={gameState !== 'playing'} aria-label={t("hardDrop")} className="py-5"><Zap className="h-6 w-6"/></Button>
+           <Button variant="outline" onClick={() => executeAction("moveRight")} disabled={gameState !== 'playing'} aria-label={t("moveRight")} className="py-5"><ArrowRight className="h-6 w-6"/></Button>
 
             <div className="col-start-2 flex justify-center">
-                <Button variant="outline" onClick={() => executeAction("softDrop")} disabled={gameState !== 'playing'} aria-label={t("moveDown")} className="py-4 w-full"><ArrowDown /></Button>
+                <Button variant="outline" onClick={() => executeAction("softDrop")} disabled={gameState !== 'playing'} aria-label={t("moveDown")} className="py-5 w-full"><ArrowDown className="h-6 w-6"/></Button>
             </div>
          </div>
       )}
