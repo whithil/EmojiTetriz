@@ -29,6 +29,19 @@ export function MobileGameControls() {
     touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
   }, [gameState]);
 
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (gameState !== 'playing' || !touchStartRef.current || e.touches.length === 0) return;
+    
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
+
+    // If vertical movement is more significant than horizontal, prevent default scroll
+    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      e.preventDefault();
+    }
+  }, [gameState, touchStartRef]);
+
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (gameState !== 'playing' || !touchStartRef.current || e.changedTouches.length === 0) return;
 
@@ -94,6 +107,7 @@ export function MobileGameControls() {
         ref={gameBoardTouchAreaRef}
         className="absolute inset-0 z-20" 
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove} 
         onTouchEnd={handleTouchEnd}
       />
 
@@ -126,4 +140,3 @@ export function MobileGameControls() {
   );
 }
 
-    
