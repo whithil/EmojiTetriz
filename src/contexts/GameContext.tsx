@@ -8,8 +8,9 @@ import {
   getRandomPiece as getRandomPieceLogic, 
   checkCollision, 
   rotatePiece as rotateLogic, 
-  mergePieceToBoard, 
-  clearLines as clearLinesLogic,
+  mergePieceToBoard,
+  getClearedRowIndices,
+  performLineClear,
   getGhostPiece as getGhostPieceLogic
 } from "@/lib/tetris-logic";
 import { 
@@ -19,9 +20,11 @@ import {
   INITIAL_SCORE, 
   INITIAL_LINES_CLEARED, 
   DEFAULT_EMOJI_SET,
-  TETROMINO_TYPES
+  TETROMINO_TYPES,
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
+
+const LINE_CLEAR_ANIMATION_DURATION = 300; // ms
 
 interface GameContextType {
   board: Board;
@@ -36,6 +39,7 @@ interface GameContextType {
   gameState: GameState;
   emojiSet: EmojiSet;
   isSoftDropping: boolean;
+  animatingRows: number[]; // Rows currently undergoing clear animation
   startGame: () => void;
   pauseGame: () => void;
   resumeGame: () => void;
@@ -69,6 +73,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [emojiSet, setEmojiSetState] = useState<EmojiSet>(DEFAULT_EMOJI_SET);
   const [gameSpeed, setGameSpeed] = useState(calculateGameSpeed(INITIAL_LEVEL));
   const [isSoftDropping, setIsSoftDropping] = useState(false);
+  const [animatingRows, setAnimatingRows] = useState<number[]>([]);
   
   const { t } = useLocalization();
 
@@ -148,13 +153,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setLinesCleared(INITIAL_LINES_CLEARED);
     setGameSpeed(calculateGameSpeed(INITIAL_LEVEL));
     setGameState("playing");
+    setAnimatingRows([]);
     
     setHeldPiece(null);
     setCanHold(true);
 
-    // Initialize piece bag and first two pieces
-    const { piece: firstPieceVal, newBag: bagAfterFirst } = internalGetRandomPiece(); // Use internal which handles bag
-    const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst); // Use direct for next to ensure bag is used
+    const { piece: firstPieceVal, newBag: bagAfterFirst } = internalGetRandomPiece();
+    const { piece: secondPieceVal, newBag: bagAfterSecond } = getRandomPieceLogic(emojiSet, bagAfterFirst);
     
     const positionedFirstPiece: CurrentPiece = {
         ...firstPieceVal,
@@ -165,21 +170,24 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setNextPiece(secondPieceVal);
     setPieceBag(bagAfterSecond);
 
-  }, [emojiSet, internalGetRandomPiece]); // internalGetRandomPiece has emojiSet and pieceBag as deps
+  }, [emojiSet, internalGetRandomPiece]);
 
   const lockPieceAndSpawnNew = useCallback((pieceToLock: CurrentPiece) => {
-    let newBoard = mergePieceToBoard(pieceToLock, board);
-    const { board: boardAfterClear, linesCleared: numLinesCleared } = clearLinesLogic(newBoard);
-    setBoard(boardAfterClear);
+    const boardWithPiece = mergePieceToBoard(pieceToLock, board);
+    const clearedIndices = getClearedRowIndices(boardWithPiece);
 
-    if (numLinesCleared > 0) {
+    if (clearedIndices.length > 0) {
+      setBoard(boardWithPiece); // Show board with piece merged before animation
+      setAnimatingRows(clearedIndices);
+      
+      const numLinesCleared = clearedIndices.length;
       const newLinesClearedTotal = linesCleared + numLinesCleared;
       setLinesCleared(newLinesClearedTotal);
       let lineScore = 0;
       if (numLinesCleared === 1) lineScore = 40;
       else if (numLinesCleared === 2) lineScore = 100;
       else if (numLinesCleared === 3) lineScore = 300;
-      else if (numLinesCleared >= 4) lineScore = 1200; // Tetris bonus
+      else if (numLinesCleared >= 4) lineScore = 1200;
       setScore(prev => prev + lineScore * level);
       
       const newLevel = Math.floor(newLinesClearedTotal / 10) + 1;
@@ -187,23 +195,33 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setLevel(newLevel);
         setGameSpeed(calculateGameSpeed(newLevel));
       }
+
+      setTimeout(() => {
+        const { board: boardAfterActualClear } = performLineClear(boardWithPiece, clearedIndices);
+        setBoard(boardAfterActualClear);
+        setAnimatingRows([]);
+        spawnNewPiece();
+        setCanHold(true);
+      }, LINE_CLEAR_ANIMATION_DURATION);
+    } else {
+      setBoard(boardWithPiece);
+      spawnNewPiece();
+      setCanHold(true);
     }
-    spawnNewPiece();
-    setCanHold(true); 
-  }, [board, linesCleared, level, score, spawnNewPiece]);
+  }, [board, linesCleared, level, score, spawnNewPiece, internalGetRandomPiece]); // Added internalGetRandomPiece for spawnNewPiece dependency chain
 
   const processMoveDown = useCallback(() => {
-    if (!currentPiece || gameState !== "playing") return;
+    if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
 
     if (!checkCollision(currentPiece, board, { yOffset: 1 })) {
       setCurrentPiece(prev => prev ? { ...prev, y: prev.y + 1 } : null);
     } else {
       lockPieceAndSpawnNew(currentPiece);
     }
-  }, [currentPiece, board, gameState, lockPieceAndSpawnNew]);
+  }, [currentPiece, board, gameState, lockPieceAndSpawnNew, animatingRows]);
 
   const holdPiece = useCallback(() => {
-    if (!currentPiece || gameState !== "playing" || !canHold) return;
+    if (!currentPiece || gameState !== "playing" || !canHold || animatingRows.length > 0) return;
 
     const pieceToStoreInHold: CurrentPiece = { 
         ...currentPiece, 
@@ -220,15 +238,15 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       spawnNewPiece(pieceFromHold); 
     }
     setCanHold(false);
-  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece]);
+  }, [currentPiece, heldPiece, gameState, canHold, spawnNewPiece, animatingRows]);
 
 
   useEffect(() => {
-    if (gameState === "playing" && !isSoftDropping) {
+    if (gameState === "playing" && !isSoftDropping && animatingRows.length === 0) {
       const gameInterval = setInterval(processMoveDown, gameSpeed);
       return () => clearInterval(gameInterval);
     }
-  }, [gameState, processMoveDown, gameSpeed, isSoftDropping]);
+  }, [gameState, processMoveDown, gameSpeed, isSoftDropping, animatingRows]);
 
   useEffect(() => {
     if (currentPiece && gameState === "playing") {
@@ -239,35 +257,34 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [currentPiece, board, gameState]);
 
   const moveLeft = () => {
-    if (!currentPiece || gameState !== "playing" || checkCollision(currentPiece, board, { xOffset: -1 })) return;
+    if (!currentPiece || gameState !== "playing" || animatingRows.length > 0 || checkCollision(currentPiece, board, { xOffset: -1 })) return;
     setCurrentPiece(prev => prev ? { ...prev, x: prev.x - 1 } : null);
   };
 
   const moveRight = () => {
-    if (!currentPiece || gameState !== "playing" || checkCollision(currentPiece, board, { xOffset: 1 })) return;
+    if (!currentPiece || gameState !== "playing" || animatingRows.length > 0 || checkCollision(currentPiece, board, { xOffset: 1 })) return;
     setCurrentPiece(prev => prev ? { ...prev, x: prev.x + 1 } : null);
   };
 
   const rotatePiece = () => {
-    if (!currentPiece || gameState !== "playing") return;
+    if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
     const rotated = rotateLogic(currentPiece, board, emojiSet);
     setCurrentPiece(rotated);
   };
   
   const softDrop = () => {
-    if (!currentPiece || gameState !== "playing") return;
+    if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
     setIsSoftDropping(true); 
     processMoveDown();
     setTimeout(() => setIsSoftDropping(false), 50); 
   };
 
   const hardDrop = () => {
-    if (!currentPiece || gameState !== "playing") return;
+    if (!currentPiece || gameState !== "playing" || animatingRows.length > 0) return;
     let finalLandedPiece = { ...currentPiece };
     while (!checkCollision(finalLandedPiece, board, { yOffset: 1 })) {
       finalLandedPiece.y += 1;
     }
-    // Directly lock the piece at its final determined position
     lockPieceAndSpawnNew(finalLandedPiece);
   };
 
@@ -286,7 +303,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <GameContext.Provider value={{
-      board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold, score, level, linesCleared, gameState, emojiSet, isSoftDropping,
+      board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold, score, level, linesCleared, gameState, emojiSet, isSoftDropping, animatingRows,
       startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece, softDrop, hardDrop, holdPiece, setEmojiSet, getCurrentGameStateForAI
     }}>
       {children}
@@ -301,7 +318,3 @@ export const useGameContext = () => {
   }
   return context;
 };
-
-    
-
-    

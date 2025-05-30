@@ -100,22 +100,31 @@ export const mergePieceToBoard = (piece: CurrentPiece, board: Board): Board => {
   return newBoard;
 };
 
-export const clearLines = (board: Board): { board: Board, linesCleared: number } => {
-  let linesCleared = 0;
-  let newBoard = board.filter(row => {
+export const getClearedRowIndices = (board: Board): number[] => {
+  const indices: number[] = [];
+  board.forEach((row, y) => {
     if (row.every(cell => cell !== null)) {
-      linesCleared++;
-      return false;
+      indices.push(y);
     }
-    return true;
   });
+  return indices;
+};
+
+export const performLineClear = (board: Board, clearedRowIndices: number[]): { board: Board, linesCleared: number } => {
+  let linesClearedCount = clearedRowIndices.length;
+  if (linesClearedCount === 0) {
+    return { board, linesCleared: 0 };
+  }
+
+  let newBoard = board.filter((_, y) => !clearedRowIndices.includes(y));
 
   while (newBoard.length < BOARD_HEIGHT) {
     newBoard.unshift(Array(BOARD_WIDTH).fill(null));
   }
   
-  return { board: newBoard, linesCleared };
+  return { board: newBoard, linesCleared: linesClearedCount };
 };
+
 
 export const getGhostPiece = (currentPiece: CurrentPiece, board: Board): CurrentPiece => {
   let ghostPiece = { ...currentPiece, y: currentPiece.y };

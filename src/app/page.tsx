@@ -18,7 +18,7 @@ import { Play } from "lucide-react";
 
 export default function HomePage() {
   const { 
-    board, currentPiece, nextPiece, ghostPiece, heldPiece, // Add heldPiece
+    board, currentPiece, nextPiece, ghostPiece, heldPiece, animatingRows,
     score, level, linesCleared, gameState, startGame 
   } = useGameContext();
   const { t } = useLocalization();
@@ -56,8 +56,8 @@ export default function HomePage() {
                 </Button>
               </div>
             )}
-            <GameBoard board={board} currentPiece={currentPiece} ghostPiece={ghostPiece} />
-            <GameOverOverlay />
+            <GameBoard board={board} currentPiece={currentPiece} ghostPiece={ghostPiece} animatingRows={animatingRows} />
+            {gameState === "gameOver" && currentPiece && <GameOverOverlay />} {/* Show GameOverOverlay only if game is over AND piece is present (meaning not initial screen) */}
           </div>
         </div>
       </main>
@@ -68,5 +68,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

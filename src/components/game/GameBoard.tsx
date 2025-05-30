@@ -9,9 +9,10 @@ interface GameBoardProps {
   board: Board;
   currentPiece: CurrentPiece | null;
   ghostPiece: CurrentPiece | null;
+  animatingRows: number[];
 }
 
-export function GameBoard({ board, currentPiece, ghostPiece }: GameBoardProps) {
+export function GameBoard({ board, currentPiece, ghostPiece, animatingRows }: GameBoardProps) {
   const displayBoard: Board = board.map(row => [...row]);
 
   // Draw ghost piece first
@@ -68,7 +69,8 @@ export function GameBoard({ board, currentPiece, ghostPiece }: GameBoardProps) {
             className={cn(
               "tetris-board-cell",
               cell ? "filled" : "empty",
-              ghostPiece && ghostPiece.shape.some((gr, gy) => gr.some((gv, gx) => gv !== 0 && ghostPiece.y + gy === y && ghostPiece.x + gx === x)) && ! (currentPiece && currentPiece.shape.some((cr, cy) => cr.some((cv, cx) => cv !== 0 && currentPiece.y + cy === y && currentPiece.x + cx === x))) ? 'ghost-piece' : ''
+              ghostPiece && ghostPiece.shape.some((gr, gy) => gr.some((gv, gx) => gv !== 0 && ghostPiece.y + gy === y && ghostPiece.x + gx === x)) && ! (currentPiece && currentPiece.shape.some((cr, cy) => cr.some((cv, cx) => cv !== 0 && currentPiece.y + cy === y && currentPiece.x + cx === x))) ? 'ghost-piece' : '',
+              cell && animatingRows.includes(y) && "line-clearing" // Apply animation class
             )}
             role="gridcell"
             aria-label={cell ? `Cell ${x + 1}, ${y + 1} filled with ${cell.type} piece` : `Cell ${x + 1}, ${y + 1} empty`}
