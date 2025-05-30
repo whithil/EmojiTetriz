@@ -24,7 +24,7 @@ export function GameBoard({ board, currentPiece, ghostPiece, animatingRows }: Ga
           const boardX = ghostPiece.x + x;
           if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
             if (!displayBoard[boardY][boardX]) { // Only draw if cell is empty
-              displayBoard[boardY][boardX] = { emoji: ghostPiece.emoji, type: ghostPiece.type };
+              displayBoard[boardY][boardX] = { emoji: ghostPiece.emoji, type: ghostPiece.type, id: ghostPiece.id };
             }
           }
         }
@@ -40,7 +40,7 @@ export function GameBoard({ board, currentPiece, ghostPiece, animatingRows }: Ga
           const boardY = currentPiece.y + y;
           const boardX = currentPiece.x + x;
           if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-            displayBoard[boardY][boardX] = { emoji: currentPiece.emoji, type: currentPiece.type };
+            displayBoard[boardY][boardX] = { emoji: currentPiece.emoji, type: currentPiece.type, id: currentPiece.id };
           }
         }
       });
@@ -50,14 +50,14 @@ export function GameBoard({ board, currentPiece, ghostPiece, animatingRows }: Ga
 
   return (
     <div
-      className="grid bg-card shadow-lg rounded-lg p-1 md:p-2"
+      className="grid bg-card shadow-lg rounded-lg p-1 md:p-2 relative" // Added relative for overlay positioning
       style={{
         gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`,
         gridTemplateRows: `repeat(${BOARD_HEIGHT}, 1fr)`,
         aspectRatio: `${BOARD_WIDTH} / ${BOARD_HEIGHT}`,
-        maxHeight: 'calc(90vh - 120px)', // Prevent board from being too tall
-        maxWidth: `calc((90vh - 120px) * (${BOARD_WIDTH} / ${BOARD_HEIGHT}))`, // Maintain aspect ratio
-        margin: '0 auto', // Center the board
+        maxHeight: 'calc(90vh - 160px)', // Adjusted for potential mobile info panels
+        maxWidth: `calc((90vh - 160px) * (${BOARD_WIDTH} / ${BOARD_HEIGHT}))`, 
+        margin: '0 auto', 
       }}
       role="grid"
       aria-label="Tetris game board"
@@ -70,7 +70,7 @@ export function GameBoard({ board, currentPiece, ghostPiece, animatingRows }: Ga
               "tetris-board-cell",
               cell ? "filled" : "empty",
               ghostPiece && ghostPiece.shape.some((gr, gy) => gr.some((gv, gx) => gv !== 0 && ghostPiece.y + gy === y && ghostPiece.x + gx === x)) && ! (currentPiece && currentPiece.shape.some((cr, cy) => cr.some((cv, cx) => cv !== 0 && currentPiece.y + cy === y && currentPiece.x + cx === x))) ? 'ghost-piece' : '',
-              cell && animatingRows.includes(y) && "line-clearing" // Apply animation class
+              cell && animatingRows.includes(y) && "line-clearing" 
             )}
             role="gridcell"
             aria-label={cell ? `Cell ${x + 1}, ${y + 1} filled with ${cell.type} piece` : `Cell ${x + 1}, ${y + 1} empty`}
@@ -82,3 +82,5 @@ export function GameBoard({ board, currentPiece, ghostPiece, animatingRows }: Ga
     </div>
   );
 }
+
+    
