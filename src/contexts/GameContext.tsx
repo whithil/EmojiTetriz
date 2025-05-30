@@ -29,7 +29,7 @@ import {
 } from "@/lib/tetris-constants";
 import { useLocalization } from "./LocalizationContext";
 import { useToast } from "@/hooks/use-toast";
-import { decodeShareableData } from "@/lib/theme-utils"; // Updated import
+import { decodeShareableData } from "@/lib/theme-utils";
 
 const LINE_CLEAR_ANIMATION_DURATION = 300; // ms
 const LEVEL_UP_CONFETTI_DURATION = 1500; // ms, should match Confetti.tsx
@@ -74,7 +74,7 @@ interface GameContextType {
   customMinoesData: CustomMinoData[];
   addCustomMino: (minoData: Omit<CustomMinoData, 'id'>) => void;
   removeCustomMino: (id: string) => void;
-  _setCustomMinoesBatch: (newMinoes: CustomMinoData[]) => void; // Exposed for direct setting by ThemeSharing
+  _setCustomMinoesBatch: (newMinoes: CustomMinoData[]) => void;
 
   startGame: () => void;
   pauseGame: () => void;
@@ -117,12 +117,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [keyboardMappings, setKeyboardMappingsInternal] = useState<KeyboardMapping>(DEFAULT_KEYBOARD_MAPPINGS);
   const [gamepadMappings, setGamepadMappingsInternal] = useState<GamepadMapping>(DEFAULT_GAMEPAD_MAPPINGS);
 
-  const [confettiOnLineClearEnabled, setConfettiOnLineClearEnabledInternalState] = useState<boolean>(true);
+  const [confettiOnLineClearEnabled, setConfettiOnLineClearEnabledInternal] = useState<boolean>(true);
   const [showLineClearConfetti, setShowLineClearConfetti] = useState<boolean>(false);
-  const [confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabledInternalState] = useState<boolean>(true);
+  const [confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabledInternal] = useState<boolean>(true);
   const [showLevelUpConfetti, setShowLevelUpConfetti] = useState<boolean>(false);
 
-  const [customMinoesEnabled, setCustomMinoesEnabledInternalState] = useState<boolean>(true);
+  const [customMinoesEnabled, setCustomMinoesEnabledInternal] = useState<boolean>(true);
   const [customMinoesData, setCustomMinoesDataInternal] = useState<CustomMinoData[]>([]);
 
   const { t } = useLocalization();
@@ -158,19 +158,22 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       return defaultValue;
     };
     
-    let dataAppliedFromUrl = false;
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const themeDataFromUrl = urlParams.get('theme');
+    let themeDataAppliedFromUrl = false;
+    let customMinoesAppliedFromUrl = false;
 
-      if (themeDataFromUrl) {
-        const decodedData = decodeShareableData(themeDataFromUrl);
+    if (typeof window !== 'undefined') {
+      const currentUrlParams = new URLSearchParams(window.location.search);
+      const themeDataStringFromUrl = currentUrlParams.get('theme');
+
+      if (themeDataStringFromUrl) {
+        const decodedData = decodeShareableData(themeDataStringFromUrl);
         if (decodedData) {
           _setEmojiSet(decodedData.emojiSet);
           if (decodedData.customMinoesData) {
             _setCustomMinoesBatch(decodedData.customMinoesData);
+            customMinoesAppliedFromUrl = true;
           }
-          dataAppliedFromUrl = true;
+          themeDataAppliedFromUrl = true;
           
           const currentUrl = new URL(window.location.href);
           currentUrl.searchParams.delete('theme');
@@ -181,60 +184,55 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    if (!dataAppliedFromUrl) {
+    if (!themeDataAppliedFromUrl) { // If emojiSet wasn't applied from URL
       const parsedEmojiSet = loadFromLocalStorage<EmojiSet>(LOCAL_STORAGE_EMOJI_SET_KEY, DEFAULT_EMOJI_SET, (val) => {
           const parsed = JSON.parse(val) as EmojiSet;
           let valid = true;
           for(const type of TETROMINO_TYPES) { if(!parsed[type]) { valid = false; break; }}
           return valid ? parsed : DEFAULT_EMOJI_SET;
       });
-      _setEmojiSet(parsedEmojiSet); // Use internal setter
+      _setEmojiSet(parsedEmojiSet);
+    }
+
+    if (!customMinoesAppliedFromUrl) { // If customMinoes weren't applied from URL
+      let loadedCustomMinoes = loadFromLocalStorage<CustomMinoData[]>(
+        LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY,
+        []
+      );
+      if (loadedCustomMinoes.length === 0) {
+        const defaultJorgeMino: CustomMinoData = {
+          id: "default-jorge-mino",
+          name: "Jorge",
+          emoji: "🈂️",
+          shape: [
+            [0,0,0,1],
+            [0,0,0,1],
+            [0,1,0,1],
+            [0,1,1,1]
+          ]
+        };
+        const defaultLukaMino: CustomMinoData = {
+          id: "default-luka-mino",
+          name: "Luka",
+          emoji: "🔴",
+          shape: [
+            [0,0,0,0],
+            [0,1,0,0],
+            [0,1,1,0],
+            [0,0,0,0]
+          ]
+        };
+        loadedCustomMinoes = [defaultJorgeMino, defaultLukaMino];
+      }
+      _setCustomMinoesBatch(loadedCustomMinoes);
     }
 
     setKeyboardMappingsInternal(loadFromLocalStorage(LOCAL_STORAGE_KEYBOARD_MAPPINGS_KEY, DEFAULT_KEYBOARD_MAPPINGS));
     setGamepadMappingsInternal(loadFromLocalStorage(LOCAL_STORAGE_GAMEPAD_MAPPINGS_KEY, DEFAULT_GAMEPAD_MAPPINGS));
-
-    setConfettiOnLineClearEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, true));
-    setConfettiOnLevelUpEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, true));
-    setCustomMinoesEnabledInternalState(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, true));
     
-    let loadedCustomMinoes = loadFromLocalStorage<CustomMinoData[]>(
-      LOCAL_STORAGE_CUSTOM_MINOES_DATA_KEY,
-      []
-    );
-
-    if (loadedCustomMinoes.length === 0) {
-      const defaultJorgeMino: CustomMinoData = {
-        id: "default-jorge-mino",
-        name: "Jorge",
-        emoji: "🈂️",
-        shape: [
-          [0,0,0,1],
-          [0,0,0,1],
-          [0,1,0,1],
-          [0,1,1,1]
-        ]
-      };
-      const defaultLukaMino: CustomMinoData = {
-        id: "default-luka-mino",
-        name: "Luka",
-        emoji: "🔴",
-        shape: [
-          [0,0,0,0],
-          [0,1,0,0],
-          [0,1,1,0],
-          [0,0,0,0]
-        ]
-      };
-      loadedCustomMinoes = [defaultJorgeMino, defaultLukaMino];
-      _setCustomMinoesBatch(loadedCustomMinoes); // Use batch setter
-    }
-    // If not empty and not from URL, set internal state without re-saving to LS
-    // unless _setCustomMinoesBatch was already called by URL logic
-    if (!dataAppliedFromUrl || !urlParams.get('theme')?.includes('customMinoesData') ) { 
-        setCustomMinoesDataInternal(loadedCustomMinoes);
-    }
-
+    setConfettiOnLineClearEnabledInternal(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, true));
+    setConfettiOnLevelUpEnabledInternal(loadFromLocalStorage(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, true));
+    setCustomMinoesEnabledInternal(loadFromLocalStorage(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, true));
 
   }, [_setEmojiSet, _setCustomMinoesBatch]);
 
@@ -277,28 +275,28 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const _setConfettiOnLineClearEnabled = useCallback((enabled: boolean) => {
-    setConfettiOnLineClearEnabledInternalState(enabled);
+  const setConfettiOnLineClearEnabled = useCallback((enabled: boolean) => {
+    setConfettiOnLineClearEnabledInternal(enabled);
     if (typeof window !== 'undefined') {
       localStorage.setItem(LOCAL_STORAGE_CONFETTI_LINE_CLEAR_ENABLED_KEY, JSON.stringify(enabled));
     }
   }, []);
 
-  const _setConfettiOnLevelUpEnabled = useCallback((enabled: boolean) => {
-    setConfettiOnLevelUpEnabledInternalState(enabled);
+  const setConfettiOnLevelUpEnabled = useCallback((enabled: boolean) => {
+    setConfettiOnLevelUpEnabledInternal(enabled);
     if (typeof window !== 'undefined') {
       localStorage.setItem(LOCAL_STORAGE_CONFETTI_LEVEL_UP_ENABLED_KEY, JSON.stringify(enabled));
     }
   }, []);
 
-  const _setCustomMinoesEnabled = useCallback((enabled: boolean) => {
-    setCustomMinoesEnabledInternalState(enabled);
+  const setCustomMinoesEnabled = useCallback((enabled: boolean) => {
+    setCustomMinoesEnabledInternal(enabled);
     if (typeof window !== 'undefined') {
       localStorage.setItem(LOCAL_STORAGE_CUSTOM_MINOES_ENABLED_KEY, JSON.stringify(enabled));
     }
   }, []);
 
-  const _addCustomMino = useCallback((minoData: Omit<CustomMinoData, 'id'>) => {
+  const addCustomMino = useCallback((minoData: Omit<CustomMinoData, 'id'>) => {
     setCustomMinoesDataInternal(prev => {
       const newMino = { ...minoData, id: Date.now().toString() + Math.random().toString(36).substring(2,7) }; 
       const newData = [...prev, newMino];
@@ -312,7 +310,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [t, toast]);
 
-  const _removeCustomMino = useCallback((id: string) => {
+  const removeCustomMino = useCallback((id: string) => {
     setCustomMinoesDataInternal(prev => {
       const minoToRemove = prev.find(m => m.id === id);
       const newData = prev.filter(mino => mino.id !== id);
@@ -321,7 +319,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
       setPieceBag(currentBag => currentBag.filter(bagItemId => bagItemId !== id)); 
       if (minoToRemove) {
-        setTimeout(() => {
+         setTimeout(() => {
           toast({ title: t("customMinoRemoved"), description: t("customMinoRemovedDesc", { name: minoToRemove.name }), variant: "destructive" });
         }, 0);
       }
@@ -473,7 +471,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             return { ...prevPiece, y: prevPiece.y + 1 };
         } else {
             lockPieceAndSpawnNew(prevPiece);
-            return null; // Current piece will be reset by spawnNewPiece indirectly or set to null if game over
+            return null; 
         }
     });
   }, [currentPiece, board, gameState, lockPieceAndSpawnNew, animatingRows, showLineClearConfetti, showLevelUpConfetti]);
@@ -600,10 +598,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     <GameContext.Provider value={{
       board, currentPiece, nextPiece, ghostPiece, heldPiece, canHold, score, level, linesCleared, gameState, emojiSet, isSoftDropping, animatingRows,
       keyboardMappings, gamepadMappings,
-      confettiOnLineClearEnabled, setConfettiOnLineClearEnabled: _setConfettiOnLineClearEnabled, showLineClearConfetti,
-      confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabled: _setConfettiOnLevelUpEnabled, showLevelUpConfetti,
-      customMinoesEnabled, setCustomMinoesEnabled: _setCustomMinoesEnabled,
-      customMinoesData, addCustomMino: _addCustomMino, removeCustomMino: _removeCustomMino, _setCustomMinoesBatch,
+      confettiOnLineClearEnabled, setConfettiOnLineClearEnabled, showLineClearConfetti,
+      confettiOnLevelUpEnabled, setConfettiOnLevelUpEnabled, showLevelUpConfetti,
+      customMinoesEnabled, setCustomMinoesEnabled,
+      customMinoesData, addCustomMino, removeCustomMino, _setCustomMinoesBatch,
       startGame, pauseGame, resumeGame, moveLeft, moveRight, rotatePiece: rotatePieceInternal, softDrop, hardDrop, holdPiece,
       setEmojiSet: _setEmojiSet,
       getCurrentGameStateForAI,
@@ -630,3 +628,4 @@ declare module "./LocalizationContext" {
   }
 }
     
+
