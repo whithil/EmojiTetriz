@@ -1,0 +1,51 @@
+name: Electron CI/CD
+
+on:
+  push:
+    branches:
+      - main # Triggers on pushes to the main branch
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest # Using Ubuntu as it's common for Electron builds, even for Windows target
+
+    strategy:
+      matrix:
+        node-version: [18.x] # Specify Node.js version
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js app
+        run: npm run build:next # Assumes 'build:next' script exports to 'out'
+
+      - name: Build Electron app for Windows
+        run: npm run electron-build # Assumes 'electron-build' script builds for Windows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed for electron-builder to publish releases
+
+      - name: Create Release and Upload Artifacts
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/heads/main') # Only create release for main branch pushes
+        with:
+          files: |
+            dist_electron/*.exe
+            dist_electron/*.blockmap
+          # You can customize the release name and body
+          # Default will be the tag name (e.g., v1.0.0)
+          # body_path: CHANGELOG.md # Optional: path to a file with release notes
+          # name: MyApp Release ${{ github.ref_name }} # Optional: custom release name
+          tag_name: app-v${{ github.run_number }} # Creates a unique tag for each run
+          # draft: false # Set to true to create a draft release
+          # prerelease: false # Set to true to mark as a pre-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
