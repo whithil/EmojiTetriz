@@ -1,16 +1,22 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const url = require('url');
+const fs = require('fs');
 
 function createWindow () {
+  const preloadPath = path.join(__dirname, 'preload.js');
+  const webPreferences = {
+    nodeIntegration: false, // Recommended for security
+   contextIsolation: true, // Recommended for security
+ };
+ if (fs.existsSync(preloadPath)) {
+   webPreferences.preload = preloadPath; // Include preload script if it exists
+ }
+
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
-    webPreferences: {
-      nodeIntegration: false, // Recommended for security
-      contextIsolation: true, // Recommended for security
-      preload: path.join(__dirname, 'preload.js') // Optional: if you need a preload script
-    }
+    webPreferences
   });
 
   // Load the Next.js app
